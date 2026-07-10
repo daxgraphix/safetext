@@ -1,0 +1,72 @@
+name: safetext
+description: "SafeText — Enterprise-grade offline text steganography platform for Android."
+publish_to: 'none'
+version: 1.0.0+1
+
+environment:
+  sdk: '>=3.3.0 <4.0.0'
+
+dependencies:
+  flutter:
+    sdk: flutter
+  cupertino_icons: ^1.0.6
+
+  # State management
+  flutter_riverpod: ^2.5.1
+
+  # Fonts
+  google_fonts: ^6.2.1
+
+  # Routing
+  go_router: ^14.2.0
+
+  # Local storage
+  hive: ^2.2.3
+  hive_flutter: ^1.1.0
+  path_provider: ^2.1.3
+
+  # Steganography / image processing
+  image: ^4.2.0
+  image_picker: ^1.1.2
+
+  # Cryptography (AES-256-GCM + Argon2id KDF + CSPRNG)
+  cryptography: ^2.7.0
+
+  # Sharing & files
+  share_plus: ^10.1.4
+
+  # Device / package info
+  device_info_plus: ^10.1.0 # reserved: device model surfaced in future audit log
+  package_info_plus: ^8.0.0 # reserved: dynamic app version on Settings > About
+  permission_handler: ^11.3.1 # reserved: explicit gallery-permission UX on Android 13+
+  flutter_secure_storage: ^9.2.2 # reserved: optional keystore-backed secrets, not currently needed (no secrets persist)
+
+  # Utilities
+  uuid: ^4.4.0
+  intl: ^0.19.0
+  equatable: ^2.0.5
+  safe_device: ^1.1.4
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^4.0.0
+  flutter_launcher_icons: ^0.14.0
+  build_runner: ^2.4.9
+  hive_generator: ^2.0.1
+
+flutter_launcher_icons:
+  android: true
+  ios: false
+  image_path: "assets/secure.png"
+  adaptive_icon_background: "assets/secure.png"
+  adaptive_icon_foreground: "assets/secure.png"
+  # Note: Hive TypeAdapters are hand-written in this project (see
+  # lib/data/models) to avoid a build_runner/codegen step, consistent
+  # with the rest of the SafeText/TAI toolchain.
+
+flutter:
+  uses-material-design: true
+
+  assets:
+    - assets/

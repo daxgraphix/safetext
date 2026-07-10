@@ -1,0 +1,5 @@
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+    <!-- Debug builds are allowed to clear-text traffic to localhost for
+         Flutter's own debug service; this has no effect in release. -->
+    <uses-permission android:name="android.permission.INTERNET" />
+</manifest>

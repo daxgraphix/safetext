@@ -1,0 +1,10 @@
+# This file should NOT be checked into version control.
+# It contains machine-specific paths and is auto-generated the first time
+# you run `flutter pub get` / open the project in Android Studio.
+#
+# Example (fill in for your machine):
+# sdk.dir=/Users/you/Library/Android/sdk
+# flutter.sdk=/Users/you/dev/flutter
+# flutter.buildMode=debug
+# flutter.versionName=1.0.0
+# flutter.versionCode=1
