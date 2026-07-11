@@ -24,6 +24,7 @@ class LsbDesState {
   final int? capacityBytes;
   final String message;
   final String encryptKey;
+  final bool useRedundancy;
   final Uint8List? resultBytes;
   final File? savedFile;
 
@@ -42,6 +43,7 @@ class LsbDesState {
     this.capacityBytes,
     this.message = '',
     this.encryptKey = '',
+    this.useRedundancy = false,
     this.resultBytes,
     this.savedFile,
     this.decodeImageBytes,
@@ -71,6 +73,7 @@ class LsbDesState {
     int? capacityBytes,
     String? message,
     String? encryptKey,
+    bool? useRedundancy,
     Uint8List? resultBytes,
     File? savedFile,
     Uint8List? decodeImageBytes,
@@ -88,6 +91,7 @@ class LsbDesState {
       capacityBytes: capacityBytes ?? this.capacityBytes,
       message: message ?? this.message,
       encryptKey: encryptKey ?? this.encryptKey,
+      useRedundancy: useRedundancy ?? this.useRedundancy,
       resultBytes: resultBytes ?? this.resultBytes,
       savedFile: savedFile ?? this.savedFile,
       decodeImageBytes: decodeImageBytes ?? this.decodeImageBytes,
@@ -110,9 +114,14 @@ class LsbDesNotifier extends StateNotifier<LsbDesState> {
 
   Future<void> setEncodeImage(Uint8List bytes, String name) async {
     state = state.copyWith(encodeImageBytes: bytes, encodeImageName: name, stage: LsbDesStage.analyzing, clearError: true);
+    await _updateCapacity();
+  }
+
+  Future<void> _updateCapacity() async {
+    if (state.encodeImageBytes == null) return;
     try {
       final lsb = ref.read(lsbStegoServiceProvider);
-      final capacity = await lsb.maxCapacityBytes(bytes);
+      final capacity = await lsb.maxCapacityBytes(state.encodeImageBytes!, useRedundancy: state.useRedundancy);
       state = state.copyWith(capacityBytes: capacity, stage: LsbDesStage.idle);
     } on AppException catch (e) {
       state = state.copyWith(stage: LsbDesStage.error, errorMessage: e.message);
@@ -122,6 +131,11 @@ class LsbDesNotifier extends StateNotifier<LsbDesState> {
   void setMessage(String value) => state = state.copyWith(message: value);
   void setEncryptKey(String value) => state = state.copyWith(encryptKey: value);
   void setDecryptKey(String value) => state = state.copyWith(decryptKey: value);
+  
+  void setUseRedundancy(bool value) {
+    state = state.copyWith(useRedundancy: value, stage: LsbDesStage.analyzing);
+    _updateCapacity();
+  }
 
   Future<void> encryptAndEmbed() async {
     if (!state.canEncode) return;
@@ -135,7 +149,11 @@ class LsbDesNotifier extends StateNotifier<LsbDesState> {
       final bridged = base64Encode(encrypted);
 
       state = state.copyWith(stage: LsbDesStage.embedding);
-      final embedded = await lsb.embed(imageBytes: state.encodeImageBytes!, message: bridged);
+      final embedded = await lsb.embed(
+        imageBytes: state.encodeImageBytes!, 
+        message: bridged,
+        useRedundancy: state.useRedundancy,
+      );
 
       state = state.copyWith(stage: LsbDesStage.saving);
       final file = await storage.saveEncodedImage(embedded, fileName: 'lsb_des_${DateTime.now().millisecondsSinceEpoch}.png');

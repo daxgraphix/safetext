@@ -157,7 +157,7 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> with Ticker
             padding: const EdgeInsets.all(8),
             decoration: BoxDecoration(
               color: scheme.surface,
-              borderRadius: BorderRadius.circular(4),
+              borderRadius: BorderRadius.circular(AppRadius.sm),
               border: Border.all(color: scheme.outline, width: 2.0),
             ),
             child: Icon(Icons.shield_rounded, color: scheme.primary, size: 20),
@@ -375,7 +375,7 @@ class _OnboardPageView extends StatelessWidget {
                     padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                     decoration: BoxDecoration(
                       color: scheme.surface,
-                      borderRadius: BorderRadius.circular(4),
+                      borderRadius: BorderRadius.circular(AppRadius.sm),
                       border: Border.all(color: scheme.outline, width: 2.0),
                     ),
                     child: Row(

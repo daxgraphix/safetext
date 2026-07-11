@@ -146,7 +146,7 @@ class _ShimmerTileState extends State<_ShimmerTile> with SingleTickerProviderSta
           height: 80,
           margin: const EdgeInsets.only(bottom: 12),
           decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(24),
+            borderRadius: BorderRadius.circular(AppRadius.sm),
             gradient: LinearGradient(
               colors: [
                 scheme.surfaceContainerLow,
@@ -205,7 +205,7 @@ class _HeroCard extends StatelessWidget {
                         padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                         decoration: BoxDecoration(
                           color: AppColors.green,
-                          borderRadius: BorderRadius.circular(4),
+                          borderRadius: BorderRadius.circular(AppRadius.sm),
                           border: Border.all(color: scheme.outline, width: 2.0),
                         ),
                         child: const Text(

@@ -52,7 +52,7 @@ class _GlowContainerState extends State<GlowContainer> with SingleTickerProvider
             color: scheme.surface,
             borderRadius: BorderRadius.circular(widget.borderRadius),
             border: widget.hasBorder 
-              ? Border.all(color: scheme.outline, width: 2.0)
+              ? Border.all(color: scheme.onSurface, width: 2.0)
               : null,
             boxShadow: [
               BoxShadow(

@@ -1,6 +1,7 @@
 import 'dart:io';
 import 'dart:typed_data';
 
+import 'package:gal/gal.dart';
 import 'package:path_provider/path_provider.dart';
 
 import '../exceptions/app_exceptions.dart';
@@ -14,10 +15,11 @@ class StorageService {
   Future<Directory> _outputDir() async {
     Directory? base;
     if (Platform.isAndroid) {
-      // On Android, use the external files directory so it's visible in File Manager
-      base = await getExternalStorageDirectory();
+      // Use the application documents directory for private storage
+      base = await getApplicationDocumentsDirectory();
+    } else {
+      base = await getApplicationDocumentsDirectory();
     }
-    base ??= await getApplicationDocumentsDirectory();
     
     final dir = Directory('${base.path}/SafeText_Vault');
     if (!await dir.exists()) {
@@ -26,6 +28,8 @@ class StorageService {
     return dir;
   }
 
+  /// Saves the image to the app's private storage.
+  /// This is used for temporary storage and history.
   Future<File> saveEncodedImage(Uint8List bytes, {String? fileName}) async {
     try {
       final dir = await _outputDir();
@@ -34,6 +38,36 @@ class StorageService {
       return await file.writeAsBytes(bytes, flush: true);
     } catch (_) {
       throw const StorageException('Unable to save the encoded image.');
+    }
+  }
+
+  /// Saves the image to the device's public Gallery.
+  Future<void> saveToGallery(Uint8List bytes, {String? fileName}) async {
+    try {
+      // For Gal, we need to write to a temp file first
+      final tempDir = await getTemporaryDirectory();
+      final name = fileName ?? 'safetext_${DateTime.now().millisecondsSinceEpoch}.png';
+      final tempFile = File('${tempDir.path}/$name');
+      await tempFile.writeAsBytes(bytes);
+
+      // Save to Gallery
+      await Gal.putImage(tempFile.path, album: 'SafeText');
+      
+      // Clean up temp file
+      if (await tempFile.exists()) {
+        await tempFile.delete();
+      }
+    } catch (e) {
+      throw StorageException('Failed to save image to gallery: $e');
+    }
+  }
+
+  /// Opens the device's gallery app.
+  Future<void> openGallery() async {
+    try {
+      await Gal.open();
+    } catch (_) {
+      // Silently fail if gallery cannot be opened
     }
   }
 

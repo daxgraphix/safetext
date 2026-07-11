@@ -40,9 +40,9 @@ class _QuickActionCardState extends State<QuickActionCard> {
             duration: const Duration(milliseconds: 100),
             padding: const EdgeInsets.all(AppSpacing.md),
             decoration: BoxDecoration(
-              color: _pressed ? scheme.outline.withValues(alpha: 0.05) : scheme.surface,
-              borderRadius: BorderRadius.circular(AppRadius.base),
-              border: Border.all(color: scheme.outline, width: 2.0),
+              color: _pressed ? scheme.onSurface.withValues(alpha: 0.05) : scheme.surface,
+              borderRadius: BorderRadius.circular(AppRadius.sm),
+              border: Border.all(color: scheme.onSurface, width: 2.0),
             ),
             child: Row(
               children: [
@@ -51,8 +51,8 @@ class _QuickActionCardState extends State<QuickActionCard> {
                   height: 56,
                   decoration: BoxDecoration(
                     color: widget.color,
-                    borderRadius: BorderRadius.circular(4),
-                    border: Border.all(color: scheme.outline, width: 2.0),
+                    borderRadius: BorderRadius.circular(AppRadius.sm),
+                    border: Border.all(color: scheme.onSurface, width: 2.0),
                   ),
                   child: Icon(widget.icon, color: Colors.white, size: 28),
                 ),
@@ -76,7 +76,7 @@ class _QuickActionCardState extends State<QuickActionCard> {
                         style: TextStyle(
                           fontSize: 11,
                           fontWeight: FontWeight.w700,
-                          color: scheme.onSurface.withValues(alpha: 0.7),
+                          color: scheme.onSurface.withValues(alpha: 0.85),
                           height: 1.3,
                         ),
                       ),

@@ -256,7 +256,7 @@ class _HistoryScreenState extends ConsumerState<HistoryScreen> {
                               style: TextStyle(
                                 fontSize: 11,
                                 fontWeight: FontWeight.w700,
-                                color: scheme.onSurface.withValues(alpha: 0.6),
+                                color: scheme.onSurface.withValues(alpha: 0.85),
                                 height: 1.5,
                               ),
                             ),
@@ -449,7 +449,7 @@ class _HistoryScreenState extends ConsumerState<HistoryScreen> {
                               fontSize: 11,
                               fontWeight: FontWeight.w700,
                               height: 1.5,
-                              color: scheme.onSurface.withValues(alpha: 0.7),
+                              color: scheme.onSurface.withValues(alpha: 0.9),
                             ),
                           ),
                         ],

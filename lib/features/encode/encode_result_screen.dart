@@ -212,14 +212,29 @@ class EncodeResultScreen extends ConsumerWidget {
                 PrimaryButton(
                   label: 'Save Secure Image',
                   icon: Icons.file_download_rounded,
-                  onPressed: state.savedFile != null
-                      ? () {
+                  onPressed: state.resultBytes != null
+                      ? () async {
                           HapticFeedback.mediumImpact();
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(
-                              content: Text('IMAGE SAVED TO GALLERY'),
-                            ),
-                          );
+                          try {
+                            final storage = ref.read(storageServiceProvider);
+                            await storage.saveToGallery(
+                              state.resultBytes!,
+                              fileName: 'safetext_encoded_${DateTime.now().millisecondsSinceEpoch}.png',
+                            );
+                            if (context.mounted) {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                const SnackBar(
+                                  content: Text('IMAGE SAVED TO GALLERY'),
+                                ),
+                              );
+                            }
+                          } catch (e) {
+                            if (context.mounted) {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                SnackBar(content: Text('FAILED TO SAVE: $e')),
+                              );
+                            }
+                          }
                         }
                       : null,
                 ),

@@ -185,7 +185,7 @@ class _SplashScreenState extends ConsumerState<SplashScreen> with TickerProvider
                     padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
                     decoration: BoxDecoration(
                       color: scheme.surface,
-                      borderRadius: BorderRadius.circular(4),
+                      borderRadius: BorderRadius.circular(AppRadius.sm),
                       border: Border.all(color: scheme.outline, width: 2),
                     ),
                     child: Row(

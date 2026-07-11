@@ -29,14 +29,14 @@ class _VisualDiffViewerState extends State<VisualDiffViewer> {
         Expanded(
           child: Container(
             decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(AppRadius.base),
+              borderRadius: BorderRadius.circular(AppRadius.sm),
               border: Border.all(
                 color: scheme.onSurface,
                 width: 2,
               ),
             ),
             child: ClipRRect(
-              borderRadius: BorderRadius.circular(AppRadius.base - 2),
+              borderRadius: BorderRadius.circular(AppRadius.sm - 2),
               child: Stack(
                 children: [
                   Positioned.fill(
@@ -83,7 +83,7 @@ class _VisualDiffViewerState extends State<VisualDiffViewer> {
                                   decoration: BoxDecoration(
                                     color: AppColors.red,
                                     shape: BoxShape.rectangle,
-                                    borderRadius: BorderRadius.circular(4),
+                                    borderRadius: BorderRadius.circular(AppRadius.sm),
                                     border: Border.all(
                                       color: Colors.white,
                                       width: 2,
@@ -269,12 +269,12 @@ class RectangularSliderThumbShape extends SliderComponentShape {
       ..style = PaintingStyle.fill;
 
     final rect = Rect.fromCenter(center: center, width: 20, height: 20);
-    canvas.drawRRect(RRect.fromRectAndRadius(rect, const Radius.circular(4)), paint);
+    canvas.drawRRect(RRect.fromRectAndRadius(rect, const Radius.circular(AppRadius.sm)), paint);
     
     final borderPaint = Paint()
       ..color = Colors.white
       ..style = PaintingStyle.stroke
       ..strokeWidth = 2;
-    canvas.drawRRect(RRect.fromRectAndRadius(rect, const Radius.circular(4)), borderPaint);
+    canvas.drawRRect(RRect.fromRectAndRadius(rect, const Radius.circular(AppRadius.sm)), borderPaint);
   }
 }

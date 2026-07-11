@@ -41,6 +41,23 @@ class HistoryRepository {
     }
   }
 
+  Future<void> purgeOlderThan(int days) async {
+    try {
+      final cutoff = DateTime.now().subtract(Duration(days: days));
+      final keysToDelete = <String>[];
+      for (var entry in HiveBoxes.historyBox.values.cast<HistoryEntry>()) {
+        if (entry.timestamp.isBefore(cutoff)) {
+          keysToDelete.add(entry.id);
+        }
+      }
+      if (keysToDelete.isNotEmpty) {
+        await HiveBoxes.historyBox.deleteAll(keysToDelete);
+      }
+    } catch (_) {
+      throw const StorageException('Unable to purge old history.');
+    }
+  }
+
   ({int encodedToday, int decodedToday, int imagesProcessed}) todayStats() {
     final now = DateTime.now();
     final all = getAll();

@@ -240,6 +240,7 @@ class _EncodeScreenState extends ConsumerState<EncodeScreen> {
                 ModeCard(
                   title: 'GHOST MODE',
                   description: 'LSB-REPLACEMENT WITH GAUSSIAN NOISE DISTRIBUTION. MAXIMUM STEALTH, LOWER DURABILITY.',
+                  capacity: state.analysis?.maxCapacityBytes ?? 0,
                   icon: Icons.visibility_off_rounded,
                   selected: state.mode == StegoMode.ghost,
                   onTap: () {
@@ -251,6 +252,7 @@ class _EncodeScreenState extends ConsumerState<EncodeScreen> {
                 ModeCard(
                   title: 'ARMOR MODE',
                   description: 'MULTI-BIT REDUNDANCY WITH PARITY CHECKING. HIGH DURABILITY AGAINST COMPRESSION.',
+                  capacity: (state.analysis?.maxCapacityBytes ?? 0),
                   icon: Icons.shield_rounded,
                   selected: state.mode == StegoMode.armor,
                   onTap: () {
@@ -264,7 +266,7 @@ class _EncodeScreenState extends ConsumerState<EncodeScreen> {
                     padding: const EdgeInsets.all(16),
                     decoration: BoxDecoration(
                       color: AppColors.red.withValues(alpha: 0.1),
-                      borderRadius: BorderRadius.circular(4),
+                      borderRadius: BorderRadius.circular(AppRadius.sm),
                       border: Border.all(color: AppColors.red, width: 2.0),
                     ),
                     child: Row(

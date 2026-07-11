@@ -9,6 +9,9 @@ import '../../core/constants/app_constants.dart';
 import '../../core/services/storage_service.dart';
 import '../../core/utils/formatters.dart';
 import '../../shared/dialogs/confirm_dialog.dart';
+import '../../shared/widgets/app_buttons.dart';
+import '../../shared/widgets/grid_painter.dart';
+import '../../shared/widgets/safetext_app_bar.dart';
 
 class SettingsScreen extends ConsumerStatefulWidget {
   const SettingsScreen({super.key});
@@ -19,11 +22,18 @@ class SettingsScreen extends ConsumerStatefulWidget {
 
 class _SettingsScreenState extends ConsumerState<SettingsScreen> {
   int? _cacheBytes;
+  final ScrollController _scrollController = ScrollController();
 
   @override
   void initState() {
     super.initState();
     _loadCacheSize();
+  }
+
+  @override
+  void dispose() {
+    _scrollController.dispose();
+    super.dispose();
   }
 
   Future<void> _loadCacheSize() async {
@@ -39,25 +49,14 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
 
     return Scaffold(
       backgroundColor: scheme.surface,
-      appBar: AppBar(
-        title: const Text(
-          'SETTINGS',
-          style: TextStyle(
-            fontFamily: 'Inter',
-            fontWeight: FontWeight.w900,
-            fontSize: 18,
-            letterSpacing: 2.0,
-          ),
-        ),
-        centerTitle: true,
-        backgroundColor: AppColors.black,
-        foregroundColor: Colors.white,
-        elevation: 0,
-        shape: const Border(bottom: BorderSide(color: Colors.white, width: 2)),
+      appBar: SafeTextAppBar(
+        scrollController: _scrollController,
       ),
-      body: ListView(
-        padding: const EdgeInsets.fromLTRB(24, 24, 24, 120),
-        children: [
+      body: GridBackground(
+        child: ListView(
+          controller: _scrollController,
+          padding: const EdgeInsets.fromLTRB(24, 24, 24, 120),
+          children: [
           const _SectionLabel('APPEARANCE'),
           _SettingsCard(children: [
             _SwitchRow(
@@ -315,7 +314,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                     fontSize: 12,
                     fontWeight: FontWeight.w900,
                     letterSpacing: 3,
-                    color: scheme.onSurface.withValues(alpha: 0.5),
+                    color: scheme.onSurface.withValues(alpha: 0.85),
                   ),
                 ),
               ],
@@ -324,52 +323,94 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
           const SizedBox(height: 40),
         ],
       ),
-    );
-  }
+    ),
+  );
+}
 
   void _showPrivacyNotice(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
     showDialog(
       context: context,
-      builder: (context) => AlertDialog(
-        backgroundColor: Colors.white,
-        surfaceTintColor: Colors.transparent,
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(AppRadius.base),
-          side: const BorderSide(color: Colors.black, width: 2),
+      builder: (context) => Dialog(
+        backgroundColor: Colors.transparent,
+        child: Container(
+          decoration: BoxDecoration(
+            color: scheme.surface,
+            borderRadius: BorderRadius.circular(AppRadius.sm),
+            border: Border.all(color: scheme.onSurface, width: 2),
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+                decoration: BoxDecoration(
+                  border: Border(bottom: BorderSide(color: scheme.onSurface, width: 2)),
+                ),
+                child: Row(
+                  children: [
+                    Icon(Icons.privacy_tip_rounded, color: scheme.primary, size: 20),
+                    const SizedBox(width: 12),
+                    Text(
+                      'PRIVACY NOTICE',
+                      style: TextStyle(
+                        fontFamily: 'Roboto Mono',
+                        fontWeight: FontWeight.w900,
+                        fontSize: 14,
+                        letterSpacing: 1.0,
+                        color: scheme.onSurface,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              Padding(
+                padding: const EdgeInsets.fromLTRB(20, 20, 20, 24),
+                child: Text(
+                  'SAFETEXT KEEPS YOUR DATA LOCAL ON THIS DEVICE. NO DATA IS SENT TO REMOTE SERVERS.',
+                  style: TextStyle(
+                    fontFamily: 'Roboto Mono',
+                    fontWeight: FontWeight.w700,
+                    fontSize: 12,
+                    height: 1.5,
+                    letterSpacing: 0.5,
+                    color: scheme.onSurface,
+                  ),
+                ),
+              ),
+              Container(
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  color: scheme.onSurface.withValues(alpha: 0.02),
+                  border: Border(top: BorderSide(color: scheme.onSurface, width: 2)),
+                ),
+                child: PrimaryButton(
+                  label: 'UNDERSTOOD',
+                  onPressed: () => Navigator.pop(context),
+                ),
+              ),
+            ],
+          ),
         ),
-        title: const Text(
-          'PRIVACY NOTICE',
-          style: TextStyle(fontFamily: 'Inter', fontWeight: FontWeight.w900, fontSize: 18, color: Colors.black),
-        ),
-        content: const Text(
-          'SAFETEXT KEEPS YOUR DATA LOCAL ON THIS DEVICE. NO DATA IS SENT TO REMOTE SERVERS.',
-          style: TextStyle(fontFamily: 'Roboto Mono', fontWeight: FontWeight.w700, fontSize: 13, height: 1.5, color: Colors.black),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text(
-              'CLOSE',
-              style: TextStyle(fontFamily: 'Inter', color: AppColors.red, fontWeight: FontWeight.w900),
-            ),
-          )
-        ],
       ),
     );
   }
 
+
   void _showStegoModePicker(BuildContext context, StegoMode current, SettingsNotifier notifier) {
+    final scheme = Theme.of(context).colorScheme;
     showModalBottomSheet(
       context: context,
-      backgroundColor: AppColors.black,
+      backgroundColor: scheme.surface,
       isScrollControlled: true,
       shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(AppRadius.base)),
+        borderRadius: BorderRadius.vertical(top: Radius.circular(AppRadius.sm)),
       ),
       builder: (context) => Container(
-        decoration: const BoxDecoration(
-          border: Border(top: BorderSide(color: Colors.white, width: 2)),
-          borderRadius: BorderRadius.vertical(top: Radius.circular(AppRadius.base)),
+        decoration: BoxDecoration(
+          border: Border(top: BorderSide(color: scheme.onSurface, width: 4)),
+          borderRadius: const BorderRadius.vertical(top: Radius.circular(AppRadius.sm)),
         ),
         child: SafeArea(
           child: Padding(
@@ -382,17 +423,17 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                   height: 4,
                   margin: const EdgeInsets.only(bottom: 24),
                   decoration: BoxDecoration(
-                    color: Colors.white24,
+                    color: scheme.onSurface.withValues(alpha: 0.2),
                     borderRadius: BorderRadius.circular(2),
                   ),
                 ),
-                const Text(
+                Text(
                   'STEGANOGRAPHY MODE',
                   style: TextStyle(
                     fontWeight: FontWeight.w900,
                     fontSize: 18,
                     letterSpacing: 1.0,
-                    color: Colors.white,
+                    color: scheme.onSurface,
                   ),
                 ),
                 const SizedBox(height: 24),
@@ -495,7 +536,7 @@ class _PickerOption extends StatelessWidget {
                       style: TextStyle(
                         fontSize: 11,
                         fontWeight: FontWeight.w700,
-                        color: scheme.onSurface.withValues(alpha: 0.6),
+                        color: scheme.onSurface.withValues(alpha: 0.85),
                       ),
                     ),
                   ],
@@ -543,11 +584,11 @@ class _SettingsCard extends StatelessWidget {
     return Container(
       decoration: BoxDecoration(
         color: scheme.surface,
-        borderRadius: BorderRadius.circular(AppRadius.base),
+        borderRadius: BorderRadius.circular(AppRadius.sm),
         border: Border.all(color: scheme.outline, width: 2.0),
       ),
       child: ClipRRect(
-        borderRadius: BorderRadius.circular(AppRadius.base - 2),
+        borderRadius: BorderRadius.circular(AppRadius.sm - 2),
         child: Column(children: children),
       ),
     );
@@ -587,7 +628,7 @@ class _SwitchRow extends StatelessWidget {
                     if (subtitle != null)
                       Text(
                         subtitle!,
-                        style: TextStyle(fontSize: 11, fontWeight: FontWeight.w700, color: scheme.onSurface.withValues(alpha: 0.6)),
+                        style: TextStyle(fontSize: 11, fontWeight: FontWeight.w700, color: scheme.onSurface.withValues(alpha: 0.85)),
                       ),
                   ],
                 ),
@@ -647,7 +688,7 @@ class _NavRow extends StatelessWidget {
                   if (subtitle != null)
                     Text(
                       subtitle!,
-                      style: TextStyle(fontSize: 11, fontWeight: FontWeight.w700, color: color.withValues(alpha: 0.6)),
+                      style: TextStyle(fontSize: 11, fontWeight: FontWeight.w700, color: color.withValues(alpha: 0.85)),
                     ),
                 ],
               ),

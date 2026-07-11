@@ -36,10 +36,10 @@ class _ToolTileState extends State<ToolTile> {
           duration: const Duration(milliseconds: 100),
           padding: const EdgeInsets.all(16),
           decoration: BoxDecoration(
-            color: _pressed ? scheme.outline.withValues(alpha: 0.05) : scheme.surface,
-            borderRadius: BorderRadius.circular(AppRadius.base),
+            color: _pressed ? scheme.onSurface.withValues(alpha: 0.05) : scheme.surface,
+            borderRadius: BorderRadius.circular(AppRadius.sm),
             border: Border.all(
-              color: scheme.outline,
+              color: scheme.onSurface,
               width: 2.0,
             ),
           ),
@@ -51,8 +51,8 @@ class _ToolTileState extends State<ToolTile> {
                 height: 52,
                 decoration: BoxDecoration(
                   color: widget.color,
-                  borderRadius: BorderRadius.circular(4),
-                  border: Border.all(color: scheme.outline, width: 2.0),
+                  borderRadius: BorderRadius.circular(AppRadius.sm),
+                  border: Border.all(color: scheme.onSurface, width: 2.0),
                 ),
                 child: Icon(widget.icon, color: Colors.white, size: 24),
               ),

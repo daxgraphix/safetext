@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../app/theme/app_theme.dart';
 
 class ShimmerLoader extends StatefulWidget {
   final double width;
@@ -9,7 +10,7 @@ class ShimmerLoader extends StatefulWidget {
     super.key,
     required this.width,
     required this.height,
-    this.borderRadius = 12,
+    this.borderRadius = AppRadius.sm,
   });
 
   @override

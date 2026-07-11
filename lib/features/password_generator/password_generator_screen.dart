@@ -258,13 +258,13 @@ class _PasswordGeneratorScreenState extends ConsumerState<PasswordGeneratorScree
     if (textToCopy.isEmpty) return;
     
     HapticFeedback.mediumImpact();
-    Clipboard.setData(ClipboardData(text: textToCopy));
+    ref.read(clipboardServiceProvider).copyToClipboard(textToCopy);
 
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         backgroundColor: Colors.black,
         content: const Text(
-          'COPIED TO CLIPBOARD',
+          'COPIED TO CLIPBOARD (AUTO-CLEAR ACTIVE)',
           style: TextStyle(color: Colors.white, fontWeight: FontWeight.w900, fontSize: 12),
         ),
         behavior: SnackBarBehavior.floating,

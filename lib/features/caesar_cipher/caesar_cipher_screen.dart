@@ -449,7 +449,7 @@ class _DialPainter extends CustomPainter {
   bool shouldRepaint(covariant _DialPainter oldDelegate) => oldDelegate.value != value;
 }
 
-class _TransformSection extends StatelessWidget {
+class _TransformSection extends ConsumerWidget {
   final String title;
   final Color color;
   final TextEditingController controller;
@@ -467,7 +467,7 @@ class _TransformSection extends StatelessWidget {
   });
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final scheme = Theme.of(context).colorScheme;
     return Container(
       decoration: BoxDecoration(
@@ -547,7 +547,7 @@ class _TransformSection extends StatelessWidget {
                           fontFamily: 'Inter',
                           fontSize: 10,
                           fontWeight: FontWeight.w900,
-                          color: Colors.white54,
+                          color: Colors.white70,
                           letterSpacing: 1.0,
                         ),
                       ),
@@ -559,17 +559,17 @@ class _TransformSection extends StatelessWidget {
                             color: Colors.white,
                             onTap: () {
                               HapticFeedback.lightImpact();
-                              Clipboard.setData(ClipboardData(text: output));
+                              ref.read(clipboardServiceProvider).copyToClipboard(output);
                               ScaffoldMessenger.of(context).showSnackBar(
                                 SnackBar(
                                   backgroundColor: Colors.black,
                                   behavior: SnackBarBehavior.floating,
                                   shape: RoundedRectangleBorder(
-                                    borderRadius: BorderRadius.circular(4),
+                                    borderRadius: BorderRadius.circular(AppRadius.sm),
                                     side: const BorderSide(color: Colors.white, width: 2.0),
                                   ),
                                   content: const Text(
-                                    'COPIED TO CLIPBOARD',
+                                    'COPIED TO CLIPBOARD (AUTO-CLEAR ACTIVE)',
                                     style: TextStyle(
                                       color: Colors.white,
                                       fontWeight: FontWeight.w900,

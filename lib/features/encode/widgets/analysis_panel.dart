@@ -16,7 +16,7 @@ class AnalysisPanel extends StatelessWidget {
         padding: const EdgeInsets.all(24),
         decoration: BoxDecoration(
           color: scheme.surface,
-          borderRadius: BorderRadius.circular(AppRadius.base),
+          borderRadius: BorderRadius.circular(AppRadius.sm),
           border: Border.all(color: scheme.onSurface, width: 2),
         ),
         child: Column(
@@ -40,7 +40,13 @@ class AnalysisPanel extends StatelessWidget {
             const SizedBox(height: 8),
             Text(
               'CHECKING PIXEL DISTRIBUTION AND STATISTICAL ENTROPY',
-              style: TextStyle(fontFamily: 'Roboto Mono', fontSize: 11, color: scheme.onSurface.withValues(alpha: 0.7)),
+              style: TextStyle(
+                fontFamily: 'Roboto Mono',
+                fontSize: 11,
+                fontWeight: FontWeight.w700,
+                color: scheme.onSurface.withValues(alpha: 0.9),
+                letterSpacing: 0.5,
+              ),
             ),
           ],
         ),
@@ -52,13 +58,13 @@ class AnalysisPanel extends StatelessWidget {
         padding: const EdgeInsets.all(24),
         decoration: BoxDecoration(
           color: scheme.surface,
-          borderRadius: BorderRadius.circular(AppRadius.base),
+          borderRadius: BorderRadius.circular(AppRadius.sm),
           border: Border.all(color: scheme.onSurface, width: 2),
         ),
         child: Center(
           child: Text(
             'SELECT AN IMAGE TO SEE ANALYSIS',
-            style: TextStyle(fontSize: 13, fontWeight: FontWeight.w900, color: scheme.onSurface.withValues(alpha: 0.5)),
+            style: TextStyle(fontSize: 13, fontWeight: FontWeight.w900, color: scheme.onSurface.withValues(alpha: 0.85)),
           ),
         ),
       );
@@ -70,7 +76,7 @@ class AnalysisPanel extends StatelessWidget {
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
         color: scheme.surface,
-        borderRadius: BorderRadius.circular(AppRadius.base),
+        borderRadius: BorderRadius.circular(AppRadius.sm),
         border: Border.all(color: scheme.onSurface, width: 2),
       ),
       child: Column(
@@ -82,6 +88,7 @@ class AnalysisPanel extends StatelessWidget {
                 value: Formatters.bytes(analysis!.maxCapacityBytes),
                 icon: Icons.storage_rounded,
                 flex: 3,
+                tooltip: 'Maximum data that can be hidden in this image with the current mode.',
               ),
               _MetricItem(
                 label: 'HEALTH',
@@ -89,6 +96,7 @@ class AnalysisPanel extends StatelessWidget {
                 icon: Icons.favorite_rounded,
                 valueColor: scoreColor,
                 flex: 2,
+                tooltip: 'Image suitability based on visual complexity and noise floor.',
               ),
             ],
           ),
@@ -110,6 +118,7 @@ class AnalysisPanel extends StatelessWidget {
                 icon: Icons.security_rounded,
                 valueColor: scoreColor,
                 flex: 2,
+                tooltip: 'Estimated resistance to steganalytical detection.',
               ),
             ],
           ),
@@ -125,6 +134,7 @@ class _MetricItem extends StatelessWidget {
   final IconData icon;
   final Color? valueColor;
   final int flex;
+  final String? tooltip;
 
   const _MetricItem({
     required this.label,
@@ -132,53 +142,74 @@ class _MetricItem extends StatelessWidget {
     required this.icon,
     this.valueColor,
     required this.flex,
+    this.tooltip,
   });
 
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
+    final content = Row(
+      children: [
+        Container(
+          padding: const EdgeInsets.all(8),
+          decoration: BoxDecoration(
+            color: (valueColor ?? scheme.onSurface).withValues(alpha: 0.1),
+            borderRadius: BorderRadius.circular(AppRadius.sm),
+            border: Border.all(color: (valueColor ?? scheme.onSurface), width: 1),
+          ),
+          child: Icon(icon, size: 16, color: valueColor ?? scheme.onSurface),
+        ),
+        const SizedBox(width: 12),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                label,
+                style: TextStyle(
+                  fontSize: 9,
+                  fontWeight: FontWeight.w900,
+                  color: scheme.onSurface.withValues(alpha: 0.85),
+                  letterSpacing: 0.8,
+                ),
+              ),
+              const SizedBox(height: 2),
+              Text(
+                value,
+                style: TextStyle(
+                  fontFamily: 'Roboto Mono',
+                  fontSize: 13,
+                  fontWeight: FontWeight.w700,
+                  color: valueColor ?? scheme.onSurface,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ],
+    );
+
     return Expanded(
       flex: flex,
-      child: Row(
-        children: [
-          Container(
-            padding: const EdgeInsets.all(8),
-            decoration: BoxDecoration(
-              color: (valueColor ?? scheme.onSurface).withValues(alpha: 0.1),
-              borderRadius: BorderRadius.circular(AppRadius.sm),
-              border: Border.all(color: (valueColor ?? scheme.onSurface), width: 1),
-            ),
-            child: Icon(icon, size: 16, color: valueColor ?? scheme.onSurface),
-          ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  label,
-                  style: TextStyle(
-                    fontSize: 9,
-                    fontWeight: FontWeight.w900,
-                    color: scheme.onSurface.withValues(alpha: 0.7),
-                    letterSpacing: 0.8,
-                  ),
-                ),
-                const SizedBox(height: 2),
-                Text(
-                  value,
-                  style: TextStyle(
-                    fontFamily: 'Roboto Mono',
-                    fontSize: 13,
-                    fontWeight: FontWeight.w700,
-                    color: valueColor ?? scheme.onSurface,
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ],
-      ),
+      child: tooltip != null
+          ? Tooltip(
+              message: tooltip!.toUpperCase(),
+              padding: const EdgeInsets.all(12),
+              margin: const EdgeInsets.symmetric(horizontal: 24),
+              decoration: BoxDecoration(
+                color: scheme.onSurface,
+                borderRadius: BorderRadius.circular(AppRadius.sm),
+                border: Border.all(color: scheme.surface, width: 2),
+              ),
+              textStyle: TextStyle(
+                fontFamily: 'Roboto Mono',
+                fontSize: 10,
+                fontWeight: FontWeight.w900,
+                color: scheme.surface,
+              ),
+              child: content,
+            )
+          : content,
     );
   }
 }

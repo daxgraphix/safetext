@@ -66,7 +66,7 @@ class _StatusChipState extends State<StatusChip> with SingleTickerProviderStateM
       decoration: BoxDecoration(
         color: color,
         borderRadius: BorderRadius.circular(AppRadius.sm),
-        border: Border.all(color: scheme.outline, width: 2.0),
+        border: Border.all(color: scheme.onSurface, width: 2.0),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,

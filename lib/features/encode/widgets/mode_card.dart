@@ -1,9 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:safetext/app/theme/app_theme.dart';
+import 'package:safetext/core/utils/formatters.dart';
 
 class ModeCard extends StatefulWidget {
   final String title;
   final String description;
+  final int capacity;
   final IconData icon;
   final bool selected;
   final VoidCallback onTap;
@@ -12,6 +14,7 @@ class ModeCard extends StatefulWidget {
     super.key,
     required this.title,
     required this.description,
+    required this.capacity,
     required this.icon,
     required this.selected,
     required this.onTap,
@@ -42,10 +45,10 @@ class _ModeCardState extends State<ModeCard> {
           padding: const EdgeInsets.all(20),
           decoration: BoxDecoration(
             color: widget.selected ? scheme.onSurface : scheme.surface,
-            borderRadius: BorderRadius.circular(AppRadius.base),
+            borderRadius: BorderRadius.circular(AppRadius.sm),
             border: Border.all(
               color: scheme.onSurface,
-              width: 2,
+              width: 2.0,
             ),
           ),
           child: Row(
@@ -86,12 +89,32 @@ class _ModeCardState extends State<ModeCard> {
                       style: TextStyle(
                         fontFamily: 'Roboto Mono',
                         fontSize: 10,
+                        fontWeight: FontWeight.w600,
                         color: widget.selected 
-                            ? scheme.surface.withValues(alpha: 0.8) 
-                            : scheme.onSurface.withValues(alpha: 0.7),
+                            ? scheme.surface.withValues(alpha: 0.9) 
+                            : scheme.onSurface.withValues(alpha: 0.85),
                         height: 1.4,
                       ),
                     ),
+                    if (widget.capacity > 0) ...[
+                      const SizedBox(height: 8),
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                        decoration: BoxDecoration(
+                          color: widget.selected ? scheme.surface.withValues(alpha: 0.2) : scheme.onSurface.withValues(alpha: 0.05),
+                          borderRadius: BorderRadius.circular(2),
+                        ),
+                        child: Text(
+                          'MAX CAPACITY: ${Formatters.bytes(widget.capacity)}',
+                          style: TextStyle(
+                            fontFamily: 'Roboto Mono',
+                            fontSize: 9,
+                            fontWeight: FontWeight.w900,
+                            color: widget.selected ? scheme.surface : scheme.onSurface,
+                          ),
+                        ),
+                      ),
+                    ],
                   ],
                 ),
               ),
@@ -102,7 +125,7 @@ class _ModeCardState extends State<ModeCard> {
                   height: 24,
                   decoration: BoxDecoration(
                     shape: BoxShape.rectangle,
-                    borderRadius: BorderRadius.circular(4),
+                    borderRadius: BorderRadius.circular(AppRadius.sm),
                     color: scheme.surface,
                   ),
                   child: Icon(Icons.check_rounded, size: 16, color: scheme.onSurface),

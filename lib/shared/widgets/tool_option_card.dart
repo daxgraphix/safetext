@@ -29,13 +29,13 @@ class ToolOptionCard extends StatelessWidget {
       color: Colors.transparent,
       child: InkWell(
         onTap: onTap,
-        borderRadius: BorderRadius.circular(AppRadius.base),
+        borderRadius: BorderRadius.circular(AppRadius.sm),
         child: Container(
           padding: const EdgeInsets.all(AppSpacing.md),
           decoration: BoxDecoration(
             color: scheme.surface,
-            borderRadius: BorderRadius.circular(AppRadius.base),
-            border: Border.all(color: scheme.outline, width: 2.0),
+            borderRadius: BorderRadius.circular(AppRadius.sm),
+            border: Border.all(color: scheme.onSurface, width: 2.0),
           ),
           child: Row(
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -46,8 +46,8 @@ class ToolOptionCard extends StatelessWidget {
                 alignment: Alignment.center,
                 decoration: BoxDecoration(
                   color: iconColor,
-                  borderRadius: BorderRadius.circular(4),
-                  border: Border.all(color: scheme.outline, width: 2.0),
+                  borderRadius: BorderRadius.circular(AppRadius.sm),
+                  border: Border.all(color: scheme.onSurface, width: 2.0),
                 ),
                 child: Icon(icon, color: Colors.white, size: 24),
               ),
@@ -71,7 +71,7 @@ class ToolOptionCard extends StatelessWidget {
                       style: TextStyle(
                         fontSize: 11,
                         fontWeight: FontWeight.w700,
-                        color: scheme.onSurface.withValues(alpha: 0.7),
+                        color: scheme.onSurface.withValues(alpha: 0.85),
                         height: 1.4,
                       ),
                     ),
@@ -85,8 +85,8 @@ class ToolOptionCard extends StatelessWidget {
                                   padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                                   decoration: BoxDecoration(
                                     color: scheme.surface,
-                                    borderRadius: BorderRadius.circular(4),
-                                    border: Border.all(color: scheme.outline, width: 2.0),
+                                    borderRadius: BorderRadius.circular(AppRadius.sm),
+                                    border: Border.all(color: scheme.onSurface, width: 2.0),
                                   ),
                                   child: Text(
                                     tag.toUpperCase(),

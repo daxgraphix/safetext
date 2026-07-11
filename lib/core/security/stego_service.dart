@@ -204,7 +204,12 @@ class StegoService {
       if (headerBitCount > totalChannels) throw const NoPayloadFoundException();
 
       final headerBits = List<int>.generate(headerBitCount, (i) => _readBit(image, indexer(i)));
-      final info = _codec.parseHeader(_bitsToBytes(headerBits));
+      final HeaderInfo info;
+      try {
+        info = _codec.parseHeader(_bitsToBytes(headerBits));
+      } on FormatException catch (_) {
+        throw const NoPayloadFoundException();
+      }
 
       final rawBitsNeeded = info.mode == 1 ? info.bodyLength * 8 * 3 : info.bodyLength * 8;
       if (rawBitsNeeded <= 0 || (headerBitCount + rawBitsNeeded) > totalChannels) {
@@ -264,13 +269,20 @@ class StegoService {
 
   List<int> _sampleDistinctIndices(int count, int seed, int start, int end) {
     final rangeSize = end - start;
-    final result = List<int>.filled(count, 0);
+    if (count > rangeSize) throw const InsufficientCapacityException();
+    
     final rnd = Random(seed);
+    final indices = List<int>.generate(rangeSize, (i) => start + i);
+    
+    // Fisher-Yates shuffle first 'count' elements
     for (int i = 0; i < count; i++) {
-      final j = rnd.nextInt(rangeSize - i) + i;
-      result[i] = (j < count) ? result[i] : start + j;
+      final j = i + rnd.nextInt(rangeSize - i);
+      final temp = indices[i];
+      indices[i] = indices[j];
+      indices[j] = temp;
     }
-    return result;
+    
+    return indices.sublist(0, count);
   }
 
   List<int> _tripleEncode(List<int> bits) => bits.expand((b) => [b, b, b]).toList();

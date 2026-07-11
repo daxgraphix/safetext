@@ -68,6 +68,14 @@ class _SecurityCenterScreenState extends ConsumerState<SecurityCenterScreen> {
       backgroundColor: scheme.surface,
       appBar: SafeTextAppBar(
         scrollController: _scrollController,
+        trailing: IconButton(
+          icon: const Icon(Icons.refresh_rounded),
+          onPressed: () {
+            HapticFeedback.mediumImpact();
+            ref.invalidate(integrityProvider);
+          },
+          tooltip: 'Rescan Integrity',
+        ),
       ),
       body: GridBackground(
         child: ListView(
@@ -405,7 +413,7 @@ class _ExpandableProtocolCardState extends State<_ExpandableProtocolCard> {
                             style: TextStyle(
                               fontSize: 10,
                               fontWeight: FontWeight.w900,
-                              color: scheme.onSurface.withValues(alpha: 0.6),
+                              color: scheme.onSurface.withValues(alpha: 0.85),
                               letterSpacing: 0.5,
                             ),
                           ),
@@ -504,6 +512,7 @@ class _ThreatLevelMonitor extends StatelessWidget {
             label: 'ROOT ACCESS DETECTION',
             value: integrity.isRooted ? 'COMPROMISED' : 'SECURE',
             passed: !integrity.isRooted,
+            description: 'Checks for binary traces (su, busybox) and elevated system permissions that indicate the device has been rooted or jailbroken, which bypasses critical OS security sandboxes.',
           ),
           Padding(
             padding: const EdgeInsets.symmetric(vertical: 12),
@@ -513,6 +522,7 @@ class _ThreatLevelMonitor extends StatelessWidget {
             label: 'HARDWARE INTEGRITY',
             value: integrity.isRealDevice ? 'GENUINE' : 'EMULATED',
             passed: integrity.isRealDevice,
+            description: 'Verifies if the application is running on a physical device or an emulator. Emulators are often used for debugging but can be more susceptible to memory inspection.',
           ),
           Padding(
             padding: const EdgeInsets.symmetric(vertical: 12),
@@ -522,6 +532,7 @@ class _ThreatLevelMonitor extends StatelessWidget {
             label: 'DEVELOPER ENVIRONMENT',
             value: integrity.isDevMode ? 'UNRESTRICTED' : 'ENFORCED',
             passed: !integrity.isDevMode,
+            description: 'Detects if Developer Options or USB Debugging are enabled. These settings can allow external tools to access system-level logs and application data.',
           ),
           Padding(
             padding: const EdgeInsets.symmetric(vertical: 12),
@@ -531,6 +542,7 @@ class _ThreatLevelMonitor extends StatelessWidget {
             label: 'KERNEL SAFETY',
             value: integrity.isSafe ? 'VERIFIED' : 'SUSPICIOUS',
             passed: integrity.isSafe,
+            description: 'Comprehensive check of system-level integrity, including bootloader status, system partition signatures, and known security hooks that might indicate a compromised kernel.',
           ),
         ],
       ),
@@ -538,69 +550,113 @@ class _ThreatLevelMonitor extends StatelessWidget {
   }
 }
 
-class _ThreatVisualizationItem extends StatelessWidget {
+class _ThreatVisualizationItem extends StatefulWidget {
   final String label;
   final String value;
   final bool passed;
-  const _ThreatVisualizationItem({required this.label, required this.value, required this.passed});
+  final String description;
+
+  const _ThreatVisualizationItem({
+    required this.label,
+    required this.value,
+    required this.passed,
+    required this.description,
+  });
+
+  @override
+  State<_ThreatVisualizationItem> createState() => _ThreatVisualizationItemState();
+}
+
+class _ThreatVisualizationItemState extends State<_ThreatVisualizationItem> {
+  bool _showDetails = false;
 
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
-    final color = passed ? AppColors.green : AppColors.red;
+    final color = widget.passed ? AppColors.green : AppColors.red;
 
-    return Row(
-      children: [
-        Container(
-          width: 32,
-          height: 32,
-          decoration: BoxDecoration(
-            color: color.withValues(alpha: 0.1),
-            shape: BoxShape.rectangle,
-            borderRadius: BorderRadius.circular(AppRadius.sm),
-            border: Border.all(color: color, width: 2.0),
-          ),
-          child: Icon(
-            passed ? Icons.check_rounded : Icons.priority_high_rounded,
-            size: 16,
-            color: color,
-          ),
-        ),
-        const SizedBox(width: 16),
-        Expanded(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
+    return InkWell(
+      onTap: () {
+        HapticFeedback.selectionClick();
+        setState(() => _showDetails = !_showDetails);
+      },
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
             children: [
-              Text(
-                label,
-                style: TextStyle(
-                  fontSize: 12,
-                  fontWeight: FontWeight.w900,
-                  color: scheme.onSurface,
+              Container(
+                width: 32,
+                height: 32,
+                decoration: BoxDecoration(
+                  color: color.withValues(alpha: 0.1),
+                  shape: BoxShape.rectangle,
+                  borderRadius: BorderRadius.circular(AppRadius.sm),
+                  border: Border.all(color: color, width: 2.0),
+                ),
+                child: Icon(
+                  widget.passed ? Icons.check_rounded : Icons.priority_high_rounded,
+                  size: 16,
+                  color: color,
+                ),
+              ),
+              const SizedBox(width: 16),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      widget.label,
+                      style: TextStyle(
+                        fontSize: 12,
+                        fontWeight: FontWeight.w900,
+                        color: scheme.onSurface,
+                      ),
+                    ),
+                    Text(
+                      widget.passed ? 'PASSIVE MONITORING ACTIVE' : 'CRITICAL SECURITY ALERT',
+                      style: TextStyle(
+                        fontSize: 9,
+                        fontWeight: FontWeight.w900,
+                        color: scheme.onSurface.withValues(alpha: 0.85),
+                        letterSpacing: 0.5,
+                      ),
+                    ),
+                  ],
                 ),
               ),
               Text(
-                passed ? 'PASSIVE MONITORING ACTIVE' : 'CRITICAL SECURITY ALERT',
+                widget.value,
                 style: TextStyle(
-                  fontSize: 9,
+                  fontFamily: 'Roboto Mono',
+                  fontSize: 12,
                   fontWeight: FontWeight.w900,
-                  color: scheme.onSurface.withValues(alpha: 0.5),
-                  letterSpacing: 0.5,
+                  color: color,
                 ),
               ),
             ],
           ),
-        ),
-        Text(
-          value,
-          style: TextStyle(
-            fontFamily: 'Roboto Mono',
-            fontSize: 12,
-            fontWeight: FontWeight.w900,
-            color: color,
+          AnimatedSize(
+            duration: const Duration(milliseconds: 200),
+            curve: Curves.easeOut,
+            child: _showDetails
+                ? Padding(
+                    padding: const EdgeInsets.only(top: 12, left: 48),
+                    child: Text(
+                      widget.description.toUpperCase(),
+                      style: TextStyle(
+                        fontSize: 10,
+                        fontWeight: FontWeight.w700,
+                        color: scheme.onSurface.withValues(alpha: 0.9),
+                        height: 1.4,
+                        letterSpacing: 0.5,
+                      ),
+                    ),
+                  )
+                : const SizedBox.shrink(),
           ),
-        ),
-      ],
+        ],
+      ),
     );
   }
 }
@@ -631,7 +687,7 @@ class _AuditLogList extends ConsumerWidget {
                 style: TextStyle(
                   fontWeight: FontWeight.w900,
                   fontSize: 12,
-                  color: scheme.onSurface.withValues(alpha: 0.4),
+                  color: scheme.onSurface.withValues(alpha: 0.85),
                   letterSpacing: 0.5,
                 ),
               ),
@@ -669,7 +725,7 @@ class _AuditLogList extends ConsumerWidget {
                 style: TextStyle(
                   fontSize: 9,
                   fontWeight: FontWeight.w900,
-                  color: scheme.onSurface.withValues(alpha: 0.5),
+                  color: scheme.onSurface.withValues(alpha: 0.85),
                   letterSpacing: 0.2,
                 ),
               ),
@@ -770,7 +826,7 @@ class _AuditLogEntry extends StatelessWidget {
                 style: TextStyle(
                   fontSize: 10,
                   fontWeight: FontWeight.w900,
-                  color: scheme.onSurface.withValues(alpha: 0.6),
+                  color: scheme.onSurface.withValues(alpha: 0.85),
                   letterSpacing: 0.5,
                 ),
               ),
@@ -797,7 +853,7 @@ class _AuditLogEntry extends StatelessWidget {
                 fontFamily: 'Roboto Mono',
                 fontSize: 10,
                 fontWeight: FontWeight.w700,
-                color: scheme.onSurface.withValues(alpha: 0.5),
+                color: scheme.onSurface.withValues(alpha: 0.85),
               ),
             ),
           ],

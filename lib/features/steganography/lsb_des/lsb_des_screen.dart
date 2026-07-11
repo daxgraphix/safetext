@@ -6,6 +6,8 @@ import 'package:image_picker/image_picker.dart';
 
 import '../../../app/theme/app_colors.dart';
 import '../../../app/theme/app_theme.dart';
+import '../../../shared/widgets/grid_painter.dart';
+import '../../../shared/widgets/safetext_app_bar.dart';
 import '../../../shared/widgets/step_header.dart';
 import '../../../shared/widgets/result_sheet.dart';
 import '../../../shared/widgets/app_buttons.dart';
@@ -49,6 +51,8 @@ class _LsbDesScreenState extends ConsumerState<LsbDesScreen> with SingleTickerPr
         description: 'THE ENCRYPTED PAYLOAD HAS BEEN EMBEDDED INTO THE IMAGE.',
         sharePath: state.savedFile?.path,
         shareText: 'Secure Payload via SafeText',
+        imageBytes: state.resultBytes,
+        imageName: state.encodeImageName != null ? 'encoded_${state.encodeImageName}' : null,
         onDone: () {
           ref.read(lsbDesProvider.notifier).reset();
           _messageController.clear();
@@ -127,33 +131,44 @@ class _LsbDesScreenState extends ConsumerState<LsbDesScreen> with SingleTickerPr
 
     return Scaffold(
       backgroundColor: scheme.surface,
-      appBar: AppBar(
+      appBar: SafeTextAppBar(
+        title: 'LSB WITH DES',
         leading: IconButton(
           icon: const Icon(Icons.arrow_back_rounded),
           onPressed: () => context.pop(),
         ),
-        title: const Text('LSB WITH DES'),
-        bottom: TabBar(
-          controller: _tabController,
-          dividerColor: scheme.onSurface,
-          dividerHeight: 2,
-          indicator: BoxDecoration(
-            border: Border(
-              bottom: BorderSide(color: scheme.onSurface, width: 4),
-            ),
-          ),
-          indicatorSize: TabBarIndicatorSize.tab,
-          labelStyle: const TextStyle(fontWeight: FontWeight.w900, fontSize: 13, letterSpacing: 1.0),
-          unselectedLabelStyle: const TextStyle(fontWeight: FontWeight.w700, fontSize: 13, letterSpacing: 1.0),
-          tabs: const [Tab(text: 'ENCRYPT + EMBED'), Tab(text: 'DECODE + DECRYPT')],
-        ),
       ),
-      body: TabBarView(
-        controller: _tabController,
-        children: [
-          _EncryptEmbedTab(messageController: _messageController, keyController: _encryptKeyController),
-          _DecodeDecryptTab(keyController: _decryptKeyController),
-        ],
+      body: GridBackground(
+        child: Column(
+          children: [
+            Container(
+              color: scheme.surface,
+              child: TabBar(
+                controller: _tabController,
+                dividerColor: scheme.onSurface,
+                dividerHeight: 2,
+                indicator: BoxDecoration(
+                  border: Border(
+                    bottom: BorderSide(color: scheme.onSurface, width: 4),
+                  ),
+                ),
+                indicatorSize: TabBarIndicatorSize.tab,
+                labelStyle: const TextStyle(fontWeight: FontWeight.w900, fontSize: 13, letterSpacing: 1.0),
+                unselectedLabelStyle: const TextStyle(fontWeight: FontWeight.w700, fontSize: 13, letterSpacing: 1.0),
+                tabs: const [Tab(text: 'ENCRYPT + EMBED'), Tab(text: 'DECODE + DECRYPT')],
+              ),
+            ),
+            Expanded(
+              child: TabBarView(
+                controller: _tabController,
+                children: [
+                  _EncryptEmbedTab(messageController: _messageController, keyController: _encryptKeyController),
+                  _DecodeDecryptTab(keyController: _decryptKeyController),
+                ],
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -203,6 +218,11 @@ class _EncryptEmbedTabState extends ConsumerState<_EncryptEmbedTab> {
         if (state.capacityBytes != null) ...[
           const SizedBox(height: AppSpacing.md),
           _CapacityIndicator(capacity: state.capacityBytes!, used: state.message.length),
+          const SizedBox(height: AppSpacing.md),
+          _RedundancySwitch(
+            value: state.useRedundancy,
+            onChanged: notifier.setUseRedundancy,
+          ),
         ],
         const SizedBox(height: AppSpacing.xl),
         StepHeader(number: 2, title: 'SECURITY & CONTENT', isDone: state.message.isNotEmpty && state.encryptKey.isNotEmpty),
@@ -214,7 +234,7 @@ class _EncryptEmbedTabState extends ConsumerState<_EncryptEmbedTab> {
           style: const TextStyle(fontFamily: 'Roboto Mono', fontSize: 14),
           decoration: InputDecoration(
             hintText: 'SECRET MESSAGE...',
-            hintStyle: TextStyle(color: scheme.onSurface.withValues(alpha: 0.3)),
+            hintStyle: TextStyle(color: scheme.onSurface.withValues(alpha: 0.5)),
             filled: true,
             fillColor: scheme.surface,
             border: OutlineInputBorder(
@@ -239,7 +259,7 @@ class _EncryptEmbedTabState extends ConsumerState<_EncryptEmbedTab> {
           style: const TextStyle(fontFamily: 'Roboto Mono', fontSize: 14),
           decoration: InputDecoration(
             hintText: 'DES KEY (8 CHARACTERS)',
-            hintStyle: TextStyle(color: scheme.onSurface.withValues(alpha: 0.3)),
+            hintStyle: TextStyle(color: scheme.onSurface.withValues(alpha: 0.5)),
             prefixIcon: Icon(Icons.vpn_key_rounded, color: scheme.onSurface),
             filled: true,
             fillColor: scheme.surface,
@@ -348,20 +368,20 @@ class _DecodeDecryptTab extends ConsumerWidget {
                   style: const TextStyle(fontFamily: 'Roboto Mono', fontSize: 14),
                   decoration: InputDecoration(
                     hintText: 'ENTER DES KEY',
-                    hintStyle: TextStyle(color: scheme.onSurface.withValues(alpha: 0.3)),
+                    hintStyle: TextStyle(color: scheme.onSurface.withValues(alpha: 0.5)),
                     prefixIcon: Icon(Icons.vpn_key_rounded, color: scheme.onSurface),
                     filled: true,
                     fillColor: scheme.surface,
                     border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(AppRadius.base),
+                      borderRadius: BorderRadius.circular(AppRadius.sm),
                       borderSide: BorderSide(color: scheme.onSurface, width: 2),
                     ),
                     enabledBorder: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(AppRadius.base),
+                      borderRadius: BorderRadius.circular(AppRadius.sm),
                       borderSide: BorderSide(color: scheme.onSurface, width: 2),
                     ),
                     focusedBorder: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(AppRadius.base),
+                      borderRadius: BorderRadius.circular(AppRadius.sm),
                       borderSide: BorderSide(color: scheme.onSurface, width: 2),
                     ),
                   ),
@@ -544,6 +564,68 @@ class _CircleActionButton extends StatelessWidget {
   }
 }
 
+class _RedundancySwitch extends StatelessWidget {
+  final bool value;
+  final ValueChanged<bool> onChanged;
+
+  const _RedundancySwitch({required this.value, required this.onChanged});
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    return GestureDetector(
+      onTap: () => onChanged(!value),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+        decoration: BoxDecoration(
+          color: value ? scheme.secondary.withValues(alpha: 0.1) : scheme.surface,
+          borderRadius: BorderRadius.circular(AppRadius.sm),
+          border: Border.all(color: scheme.onSurface, width: 2),
+        ),
+        child: Row(
+          children: [
+            Icon(
+              value ? Icons.verified_user_rounded : Icons.gpp_maybe_rounded,
+              color: value ? scheme.secondary : scheme.onSurface.withValues(alpha: 0.5),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'BIT REDUNDANCY',
+                    style: TextStyle(
+                      fontFamily: 'Roboto Mono',
+                      fontSize: 11,
+                      fontWeight: FontWeight.w900,
+                      color: scheme.onSurface,
+                    ),
+                  ),
+                  Text(
+                    value ? 'ARMORED: 3X BITS FOR COMPRESSION SURVIVAL' : 'STANDARD: 1X BIT (HIGHER CAPACITY)',
+                    style: TextStyle(
+                      fontSize: 9,
+                      fontWeight: FontWeight.w700,
+                      color: scheme.onSurface.withValues(alpha: 0.85),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            Switch(
+              value: value,
+              onChanged: onChanged,
+              activeThumbColor: scheme.secondary,
+              activeTrackColor: scheme.secondary.withValues(alpha: 0.3),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
 class _CapacityIndicator extends StatelessWidget {
   final int capacity;
   final int used;
@@ -574,7 +656,7 @@ class _CapacityIndicator extends StatelessWidget {
                   fontFamily: 'Roboto Mono',
                   fontSize: 10,
                   fontWeight: FontWeight.w900,
-                  color: scheme.onSurface.withValues(alpha: 0.6),
+                  color: scheme.onSurface.withValues(alpha: 0.85),
                 ),
               ),
               Text(

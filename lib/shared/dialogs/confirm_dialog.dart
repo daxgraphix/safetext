@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
+import '../widgets/app_buttons.dart';
 import '../../app/theme/app_theme.dart';
-import '../../app/theme/app_colors.dart';
 
 Future<bool> showConfirmDialog(
   BuildContext context, {
@@ -19,7 +19,7 @@ Future<bool> showConfirmDialog(
         decoration: BoxDecoration(
           color: scheme.surface,
           borderRadius: BorderRadius.circular(AppRadius.sm),
-          border: Border.all(color: scheme.outline, width: 2),
+          border: Border.all(color: scheme.onSurface, width: 2),
         ),
         child: Column(
           mainAxisSize: MainAxisSize.min,
@@ -29,13 +29,13 @@ Future<bool> showConfirmDialog(
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
               decoration: BoxDecoration(
-                border: Border(bottom: BorderSide(color: scheme.outline, width: 2)),
+                border: Border(bottom: BorderSide(color: scheme.onSurface, width: 2)),
               ),
               child: Row(
                 children: [
                   Icon(
                     danger ? Icons.warning_amber_rounded : Icons.info_outline_rounded,
-                    color: danger ? AppColors.red : scheme.primary,
+                    color: danger ? scheme.error : scheme.primary,
                     size: 20,
                   ),
                   const SizedBox(width: 12),
@@ -64,59 +64,36 @@ Future<bool> showConfirmDialog(
                   fontWeight: FontWeight.w700,
                   height: 1.5,
                   letterSpacing: 0.5,
+                  fontFamily: 'Roboto Mono',
                 ),
               ),
             ),
             // Actions
             Container(
-              padding: const EdgeInsets.all(12),
+              padding: const EdgeInsets.all(16),
               decoration: BoxDecoration(
-                color: scheme.outline.withValues(alpha: 0.05),
-                border: Border(top: BorderSide(color: scheme.outline, width: 2)),
+                color: scheme.onSurface.withValues(alpha: 0.02),
+                border: Border(top: BorderSide(color: scheme.onSurface, width: 2)),
               ),
               child: Row(
                 children: [
                   Expanded(
-                    child: OutlinedButton(
+                    child: SecondaryButton(
+                      label: 'CANCEL',
                       onPressed: () => Navigator.of(context).pop(false),
-                      style: OutlinedButton.styleFrom(
-                        side: BorderSide(color: scheme.outline, width: 2),
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppRadius.sm)),
-                        padding: const EdgeInsets.symmetric(vertical: 16),
-                        backgroundColor: scheme.surface,
-                      ),
-                      child: Text(
-                        'CANCEL',
-                        style: TextStyle(
-                          color: scheme.onSurface,
-                          fontWeight: FontWeight.w900,
-                          fontSize: 12,
-                          letterSpacing: 1.0,
-                        ),
-                      ),
                     ),
                   ),
                   const SizedBox(width: 12),
                   Expanded(
-                    child: ElevatedButton(
-                      onPressed: () => Navigator.of(context).pop(true),
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: danger ? AppColors.red : scheme.primary,
-                        foregroundColor: scheme.onPrimary,
-                        side: BorderSide(color: scheme.outline, width: 2),
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppRadius.sm)),
-                        padding: const EdgeInsets.symmetric(vertical: 16),
-                        elevation: 0,
-                      ),
-                      child: Text(
-                        confirmLabel.toUpperCase(),
-                        style: const TextStyle(
-                          fontWeight: FontWeight.w900,
-                          fontSize: 12,
-                          letterSpacing: 1.0,
-                        ),
-                      ),
-                    ),
+                    child: danger
+                        ? DangerButton(
+                            label: confirmLabel,
+                            onPressed: () => Navigator.of(context).pop(true),
+                          )
+                        : PrimaryButton(
+                            label: confirmLabel,
+                            onPressed: () => Navigator.of(context).pop(true),
+                          ),
                   ),
                 ],
               ),
@@ -128,3 +105,4 @@ Future<bool> showConfirmDialog(
   );
   return result ?? false;
 }
+

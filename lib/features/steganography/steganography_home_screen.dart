@@ -85,7 +85,7 @@ class _SteganographyHomeScreenState extends State<SteganographyHomeScreen> {
           height: 56,
           decoration: BoxDecoration(
             color: scheme.surface,
-            borderRadius: BorderRadius.circular(AppRadius.base),
+            borderRadius: BorderRadius.circular(AppRadius.sm),
             border: Border.all(color: scheme.outline, width: 2.0),
           ),
           child: Icon(Icons.image_search_rounded, color: scheme.primary, size: 28),
@@ -121,14 +121,14 @@ class _SteganographyHomeScreenState extends State<SteganographyHomeScreen> {
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         color: scheme.surface,
-        borderRadius: BorderRadius.circular(AppRadius.base),
+        borderRadius: BorderRadius.circular(AppRadius.sm),
         border: Border.all(color: scheme.outline, width: 2.0),
       ),
-      child: const Row(
+      child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Icon(Icons.warning_amber_rounded, size: 20, color: AppColors.red),
-          SizedBox(width: 12),
+          const Icon(Icons.warning_amber_rounded, size: 20, color: AppColors.red),
+          const SizedBox(width: 12),
           Expanded(
             child: Text(
               'NEITHER OF THESE MODULES MATCHES SAFETEXT\'S CORE ENCODER IN STRENGTH. FOR ANYTHING SENSITIVE, USE ENCODE FROM THE HOME SCREEN (AES-256-GCM + ARGON2ID).',
@@ -136,7 +136,7 @@ class _SteganographyHomeScreenState extends State<SteganographyHomeScreen> {
                 fontFamily: 'Roboto Mono',
                 fontSize: 11,
                 fontWeight: FontWeight.w700,
-                color: AppColors.black,
+                color: scheme.onSurface,
                 height: 1.5,
               ),
             ),

@@ -24,8 +24,8 @@ class StatTile extends StatelessWidget {
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         color: scheme.surface,
-        borderRadius: BorderRadius.circular(AppRadius.base),
-        border: Border.all(color: scheme.outline, width: 2.0),
+        borderRadius: BorderRadius.circular(AppRadius.sm),
+        border: Border.all(color: scheme.onSurface, width: 2.0),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -36,7 +36,7 @@ class StatTile extends StatelessWidget {
               fontSize: 10,
               fontWeight: FontWeight.w900,
               letterSpacing: 1.2,
-              color: scheme.onSurface.withValues(alpha: 0.6),
+              color: scheme.onSurface.withValues(alpha: 0.85),
             ),
           ),
           const SizedBox(height: 8),

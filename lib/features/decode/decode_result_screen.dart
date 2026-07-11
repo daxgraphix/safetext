@@ -4,12 +4,14 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:share_plus/share_plus.dart';
 
+import '../../app/providers/services_providers.dart';
 import '../../app/routes.dart';
 import '../../app/theme/app_colors.dart';
 import '../../app/theme/app_theme.dart';
 import '../../shared/dialogs/confirm_dialog.dart';
 import '../../shared/widgets/app_buttons.dart';
 import '../../shared/widgets/grid_painter.dart';
+import '../../shared/widgets/safetext_app_bar.dart';
 import '../encode/widgets/particle_burst.dart';
 import 'providers/decode_provider.dart';
 import 'widgets/typing_text.dart';
@@ -25,29 +27,13 @@ class DecodeResultScreen extends ConsumerWidget {
 
     return Scaffold(
       backgroundColor: scheme.surface,
-      appBar: AppBar(
-        backgroundColor: AppColors.black,
-        elevation: 0,
-        scrolledUnderElevation: 0,
-        automaticallyImplyLeading: false,
-        shape: const Border(bottom: BorderSide(color: Colors.white, width: 2)),
-        title: const Text(
-          'DECRYPTION COMPLETE',
-          style: TextStyle(
-            fontFamily: 'Inter',
-            fontWeight: FontWeight.w900,
-            fontSize: 18,
-            letterSpacing: 1.0,
-            color: Colors.white,
-          ),
+      appBar: SafeTextAppBar(
+        title: 'DECRYPTION COMPLETE',
+        trailing: IconButton(
+          icon: Icon(Icons.info_outline_rounded, color: scheme.onSurface, size: 20),
+          onPressed: () => _showDecodingGuide(context),
+          tooltip: 'Security Guide',
         ),
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.info_outline_rounded, color: Colors.white),
-            onPressed: () => _showDecodingGuide(context),
-            tooltip: 'Security Guide',
-          ),
-        ],
       ),
       body: GridBackground(
         child: ListView(
@@ -70,7 +56,7 @@ class DecodeResultScreen extends ConsumerWidget {
                           height: 96,
                           decoration: BoxDecoration(
                             color: scheme.surface,
-                            borderRadius: BorderRadius.circular(AppRadius.base),
+                            borderRadius: BorderRadius.circular(AppRadius.sm),
                             border: Border.all(
                               color: scheme.tertiary,
                               width: 2,
@@ -89,7 +75,6 @@ class DecodeResultScreen extends ConsumerWidget {
               'SECURE PAYLOAD EXTRACTED',
               textAlign: TextAlign.center,
               style: TextStyle(
-                fontFamily: 'Inter',
                 fontSize: 22,
                 fontWeight: FontWeight.w900,
                 color: scheme.onSurface,
@@ -113,7 +98,6 @@ class DecodeResultScreen extends ConsumerWidget {
                     Text(
                       'INTEGRITY VERIFIED',
                       style: TextStyle(
-                        fontFamily: 'Inter',
                         fontSize: 11,
                         fontWeight: FontWeight.w900,
                         color: scheme.tertiary,
@@ -258,7 +242,6 @@ class DecodeResultScreen extends ConsumerWidget {
                 label: Text(
                   'BACK TO DASHBOARD',
                   style: TextStyle(
-                    fontFamily: 'Inter',
                     fontWeight: FontWeight.w900,
                     color: scheme.onSurface,
                     fontSize: 12,
@@ -274,9 +257,11 @@ class DecodeResultScreen extends ConsumerWidget {
   }
 
   void _showDecodingGuide(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
     showModalBottomSheet(
       context: context,
-      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(24))),
+      backgroundColor: scheme.surface,
+      shape: const Border(top: BorderSide(color: AppColors.black, width: 2.0)),
       builder: (context) => SafeArea(
         child: Padding(
           padding: const EdgeInsets.fromLTRB(20, 20, 20, 24),
@@ -284,12 +269,21 @@ class DecodeResultScreen extends ConsumerWidget {
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text('Security Best Practices', style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w900, fontFamily: 'Inter')),
-              const SizedBox(height: 12),
-              const Text('• Never store sensitive passphrases in plain text.\n• Purge decrypted results as soon as they are no longer needed.\n• Ensure your device environment is secure before viewing payloads.',
-                  style: TextStyle(fontFamily: 'Inter', fontSize: 14, height: 1.5)),
-              const SizedBox(height: 20),
-              PrimaryButton(label: 'I Understand', onPressed: () => Navigator.pop(context)),
+              Text(
+                'SECURITY PROTOCOLS',
+                style: TextStyle(
+                  fontWeight: FontWeight.w900,
+                  fontSize: 16,
+                  color: scheme.onSurface,
+                  letterSpacing: 0.5,
+                ),
+              ),
+              const SizedBox(height: 16),
+              const _GuideItem(text: 'NEVER STORE SENSITIVE PASSPHRASES IN PLAIN TEXT.'),
+              const _GuideItem(text: 'PURGE DECRYPTED RESULTS AS SOON AS THEY ARE NO LONGER NEEDED.'),
+              const _GuideItem(text: 'ENSURE YOUR DEVICE ENVIRONMENT IS SECURE BEFORE VIEWING PAYLOADS.'),
+              const SizedBox(height: 24),
+              PrimaryButton(label: 'CONFIRM READ', onPressed: () => Navigator.pop(context)),
             ],
           ),
         ),
@@ -298,20 +292,49 @@ class DecodeResultScreen extends ConsumerWidget {
   }
 }
 
-class _CopyButton extends StatefulWidget {
+class _GuideItem extends StatelessWidget {
+  final String text;
+  const _GuideItem({required this.text});
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 8),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Text('• ', style: TextStyle(fontWeight: FontWeight.w900)),
+          Expanded(
+            child: Text(
+              text,
+              style: const TextStyle(
+                fontSize: 12,
+                fontWeight: FontWeight.w700,
+                height: 1.4,
+                letterSpacing: 0.2,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _CopyButton extends ConsumerStatefulWidget {
   final String text;
   const _CopyButton({required this.text});
 
   @override
-  State<_CopyButton> createState() => _CopyButtonState();
+  ConsumerState<_CopyButton> createState() => _CopyButtonState();
 }
 
-class _CopyButtonState extends State<_CopyButton> {
+class _CopyButtonState extends ConsumerState<_CopyButton> {
   bool _copied = false;
 
   void _handleCopy() {
     HapticFeedback.lightImpact();
-    Clipboard.setData(ClipboardData(text: widget.text));
+    ref.read(clipboardServiceProvider).copyToClipboard(widget.text);
     setState(() => _copied = true);
     Future.delayed(const Duration(seconds: 2), () {
       if (mounted) setState(() => _copied = false);
@@ -321,7 +344,7 @@ class _CopyButtonState extends State<_CopyButton> {
   @override
   Widget build(BuildContext context) {
     return PrimaryButton(
-      label: _copied ? 'Copied to Clipboard' : 'Copy Message',
+      label: _copied ? 'COPIED (AUTO-CLEAR ACTIVE)' : 'COPY MESSAGE',
       icon: _copied ? Icons.check_circle_rounded : Icons.copy_all_rounded,
       onPressed: _handleCopy,
     );
@@ -342,13 +365,13 @@ class _ActionButton extends StatelessWidget {
       color: Colors.transparent,
       child: InkWell(
         onTap: onPressed,
-        borderRadius: BorderRadius.circular(20),
+        borderRadius: BorderRadius.circular(AppRadius.sm),
         child: Container(
           padding: const EdgeInsets.all(16),
           decoration: BoxDecoration(
             color: (color ?? scheme.onSurface).withValues(alpha: 0.08),
-            borderRadius: BorderRadius.circular(20),
-            border: Border.all(color: (color ?? scheme.outlineVariant).withValues(alpha: 0.2)),
+            borderRadius: BorderRadius.circular(AppRadius.sm),
+            border: Border.all(color: (color ?? scheme.outline).withValues(alpha: 0.2), width: 2.0),
           ),
           child: Icon(icon, size: 22, color: color ?? scheme.onSurface),
         ),
@@ -370,32 +393,30 @@ class _DetailTile extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: scheme.surfaceContainerLow,
-        borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: scheme.outlineVariant.withValues(alpha: 0.4)),
+        color: scheme.surface,
+        borderRadius: BorderRadius.circular(AppRadius.sm),
+        border: Border.all(color: scheme.outline, width: 2.0),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Icon(icon, size: 18, color: scheme.onSurfaceVariant),
+          Icon(icon, size: 18, color: scheme.primary),
           const SizedBox(height: 12),
           Text(
             label.toUpperCase(),
             style: TextStyle(
-              fontFamily: 'Inter',
               fontSize: 9,
-              fontWeight: FontWeight.w800,
-              color: scheme.onSurfaceVariant,
+              fontWeight: FontWeight.w900,
+              color: scheme.onSurface.withValues(alpha: 0.6),
               letterSpacing: 0.6,
             ),
           ),
           const SizedBox(height: 4),
           Text(
-            value,
+            value.toUpperCase(),
             style: TextStyle(
-              fontFamily: 'Inter',
-              fontSize: 14,
-              fontWeight: FontWeight.w700,
+              fontSize: 13,
+              fontWeight: FontWeight.w900,
               color: scheme.onSurface,
             ),
           ),

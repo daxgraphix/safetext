@@ -50,7 +50,7 @@ class _ActivityTileState extends State<ActivityTile> {
           decoration: BoxDecoration(
             borderRadius: BorderRadius.circular(AppRadius.sm),
             color: scheme.surface,
-            border: Border.all(color: scheme.outline, width: 2.0),
+            border: Border.all(color: scheme.onSurface, width: 2.0),
           ),
           child: Row(
             children: [
@@ -60,7 +60,7 @@ class _ActivityTileState extends State<ActivityTile> {
                 decoration: BoxDecoration(
                   color: widget.iconColor,
                   borderRadius: BorderRadius.circular(AppRadius.sm),
-                  border: Border.all(color: scheme.outline, width: 2.0),
+                  border: Border.all(color: scheme.onSurface, width: 2.0),
                 ),
                 child: Icon(widget.icon, color: Colors.white, size: 20),
               ),
@@ -88,7 +88,7 @@ class _ActivityTileState extends State<ActivityTile> {
                       style: TextStyle(
                         fontSize: 10,
                         fontWeight: FontWeight.w700,
-                        color: scheme.onSurface.withValues(alpha: 0.7),
+                        color: scheme.onSurface.withValues(alpha: 0.85),
                         letterSpacing: 0.5,
                       ),
                     ),

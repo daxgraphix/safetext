@@ -6,6 +6,8 @@ import 'package:image_picker/image_picker.dart';
 
 import '../../../app/theme/app_colors.dart';
 import '../../../app/theme/app_theme.dart';
+import '../../../shared/widgets/grid_painter.dart';
+import '../../../shared/widgets/safetext_app_bar.dart';
 import '../../../shared/widgets/step_header.dart';
 import '../../../shared/widgets/result_sheet.dart';
 import '../../../shared/widgets/app_buttons.dart';
@@ -45,6 +47,8 @@ class _LsbTextScreenState extends ConsumerState<LsbTextScreen> with SingleTicker
         description: 'THE SECRET MESSAGE HAS BEEN HIDDEN WITHIN THE PIXELS OF THE IMAGE.',
         sharePath: state.savedFile?.path,
         shareText: 'Encoded with SafeText',
+        imageBytes: state.resultBytes,
+        imageName: state.encodeImageName != null ? 'encoded_${state.encodeImageName}' : null,
         onDone: () {
           ref.read(lsbTextProvider.notifier).reset();
           _messageController.clear();
@@ -119,33 +123,44 @@ class _LsbTextScreenState extends ConsumerState<LsbTextScreen> with SingleTicker
 
     return Scaffold(
       backgroundColor: scheme.surface,
-      appBar: AppBar(
+      appBar: SafeTextAppBar(
+        title: 'LSB ON TEXT',
         leading: IconButton(
           icon: const Icon(Icons.arrow_back_rounded),
           onPressed: () => context.pop(),
         ),
-        title: const Text('LSB ON TEXT'),
-        bottom: TabBar(
-          controller: _tabController,
-          dividerColor: scheme.onSurface,
-          dividerHeight: 2,
-          indicator: BoxDecoration(
-            border: Border(
-              bottom: BorderSide(color: scheme.onSurface, width: 4),
-            ),
-          ),
-          indicatorSize: TabBarIndicatorSize.tab,
-          labelStyle: const TextStyle(fontWeight: FontWeight.w900, fontSize: 13, letterSpacing: 1.0),
-          unselectedLabelStyle: const TextStyle(fontWeight: FontWeight.w700, fontSize: 13, letterSpacing: 1.0),
-          tabs: const [Tab(text: 'ENCODE'), Tab(text: 'DECODE')],
-        ),
       ),
-      body: TabBarView(
-        controller: _tabController,
-        children: [
-          _EncodeTab(messageController: _messageController),
-          const _DecodeTab(),
-        ],
+      body: GridBackground(
+        child: Column(
+          children: [
+            Container(
+              color: scheme.surface,
+              child: TabBar(
+                controller: _tabController,
+                dividerColor: scheme.onSurface,
+                dividerHeight: 2,
+                indicator: BoxDecoration(
+                  border: Border(
+                    bottom: BorderSide(color: scheme.onSurface, width: 4),
+                  ),
+                ),
+                indicatorSize: TabBarIndicatorSize.tab,
+                labelStyle: const TextStyle(fontWeight: FontWeight.w900, fontSize: 13, letterSpacing: 1.0),
+                unselectedLabelStyle: const TextStyle(fontWeight: FontWeight.w700, fontSize: 13, letterSpacing: 1.0),
+                tabs: const [Tab(text: 'ENCODE'), Tab(text: 'DECODE')],
+              ),
+            ),
+            Expanded(
+              child: TabBarView(
+                controller: _tabController,
+                children: [
+                  _EncodeTab(messageController: _messageController),
+                  const _DecodeTab(),
+                ],
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -202,7 +217,7 @@ class _EncodeTabState extends ConsumerState<_EncodeTab> {
           style: const TextStyle(fontFamily: 'Roboto Mono', fontSize: 14),
           decoration: InputDecoration(
             hintText: 'TYPE YOUR MESSAGE HERE...',
-            hintStyle: TextStyle(color: scheme.onSurface.withValues(alpha: 0.3)),
+            hintStyle: TextStyle(color: scheme.onSurface.withValues(alpha: 0.5)),
             filled: true,
             fillColor: scheme.surface,
             border: OutlineInputBorder(
@@ -442,7 +457,7 @@ class _CapacityIndicator extends StatelessWidget {
                   fontFamily: 'Roboto Mono',
                   fontSize: 10,
                   fontWeight: FontWeight.w900,
-                  color: scheme.onSurface.withValues(alpha: 0.6),
+                  color: scheme.onSurface.withValues(alpha: 0.85),
                 ),
               ),
               Text(

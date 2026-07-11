@@ -34,6 +34,7 @@ dependencies:
 
   # Sharing & files
   share_plus: ^10.1.4
+  gal: ^2.2.1
 
   # Device / package info
   device_info_plus: ^10.1.0 # reserved: device model surfaced in future audit log

@@ -68,9 +68,21 @@ void main() {
   group('StegoService', () {
     const stego = StegoService();
 
-    test('Ghost Mode: embed then extract recovers the exact payload bytes', () async {
-      final carrier = _generateTestPng();
-      final body = Uint8List.fromList(List.generate(64, (i) => i % 256));
+    test('Ghost Mode: full encrypt -> embed -> extract -> decrypt round trip', () async {
+      const message = 'Stealth sync at marker 0x7F.';
+      const passphrase = 'ghost-mode-passphrase';
+      final crypto = CryptoService();
+      const codec = PayloadCodec();
+
+      final carrier = _generateTestPng(width: 300, height: 300);
+      final encryptionResult = await crypto.encrypt(message, passphrase);
+      final body = codec.buildBody(
+        timestamp: DateTime.now(),
+        salt: encryptionResult.salt,
+        nonce: encryptionResult.nonce,
+        cipherText: encryptionResult.cipherText,
+        mac: encryptionResult.mac,
+      );
 
       final embedded = await stego.embed(
         imageBytes: carrier,
@@ -79,12 +91,17 @@ void main() {
         seed: 123456789,
       );
 
-      final payload = await stego.extract(embedded);
-      // We can't reconstruct the raw body directly from SafeTextPayload
-      // (it's parsed into fields), so instead verify a full encrypt -> embed
-      // -> extract -> decrypt round trip below covers byte-exactness
-      // end-to-end. Here we just assert extraction succeeds without error.
-      expect(payload.isGhost, isTrue);
+      final extracted = await stego.extract(embedded);
+      final decrypted = await crypto.decrypt(
+        salt: extracted.salt,
+        nonce: extracted.nonce,
+        cipherText: extracted.cipherText,
+        mac: extracted.mac,
+        passphrase: passphrase,
+      );
+
+      expect(decrypted, message);
+      expect(extracted.isGhost, isTrue);
     });
 
     test('Armor Mode: full encrypt -> embed -> extract -> decrypt round trip', () async {
@@ -137,6 +154,62 @@ void main() {
     test('extract() throws NoPayloadFoundException on a carrier with no payload', () async {
       final carrier = _generateTestPng();
       expect(() => stego.extract(carrier), throwsA(isA<NoPayloadFoundException>()));
+    });
+    test('Armor Mode: survives minor LSB corruption (simulated compression)', () async {
+      const message = 'Survival test for redundant encoding.';
+      const passphrase = 'durability-passphrase';
+      final crypto = CryptoService();
+      const codec = PayloadCodec();
+
+      final carrier = _generateTestPng(width: 200, height: 200);
+      final encryptionResult = await crypto.encrypt(message, passphrase);
+      final body = codec.buildBody(
+        timestamp: DateTime.now(),
+        salt: encryptionResult.salt,
+        nonce: encryptionResult.nonce,
+        cipherText: encryptionResult.cipherText,
+        mac: encryptionResult.mac,
+      );
+
+      final embedded = await stego.embed(
+        imageBytes: carrier,
+        bodyBytes: body,
+        mode: StegoMode.armor,
+        seed: 123,
+      );
+
+      // Simulate corruption: Flip some LSBs in the body region.
+      // Armor Mode uses 3x redundancy, so we can survive 1 flipped bit per triplet.
+      final corrupted = Uint8List.fromList(embedded);
+      final decoded = img.decodePng(corrupted)!;
+      
+      // The header is at the start (18 bytes * 8 bits = 144 bits/channels).
+      // We'll corrupt bits in the body (starting after the header).
+      // We flip every 10th channel's LSB in the body.
+      const headerBits = PayloadCodec.headerLengthBytes * 8;
+      for (int i = headerBits; i < headerBits + (body.length * 8 * 3); i += 10) {
+        final pixelIndex = i ~/ 3;
+        final channel = i % 3;
+        final x = pixelIndex % decoded.width;
+        final y = pixelIndex ~/ decoded.width;
+        final pixel = decoded.getPixel(x, y);
+        final c = [pixel.r.toInt(), pixel.g.toInt(), pixel.b.toInt()];
+        c[channel] = c[channel] ^ 1; // Flip LSB
+        decoded.setPixelRgb(x, y, c[0], c[1], c[2]);
+      }
+      
+      final corruptedBytes = Uint8List.fromList(img.encodePng(decoded));
+
+      final extracted = await stego.extract(corruptedBytes);
+      final decrypted = await crypto.decrypt(
+        salt: extracted.salt,
+        nonce: extracted.nonce,
+        cipherText: extracted.cipherText,
+        mac: extracted.mac,
+        passphrase: passphrase,
+      );
+
+      expect(decrypted, message);
     });
   });
 }

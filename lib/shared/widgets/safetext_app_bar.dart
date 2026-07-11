@@ -1,14 +1,23 @@
 import 'package:flutter/material.dart';
+import '../../app/theme/app_theme.dart';
 
 /// The recurring "shield + SafeText wordmark ... lock icon" header seen on
 /// nearly every screen in the design.
 class SafeTextAppBar extends StatefulWidget implements PreferredSizeWidget {
+  final String? title;
   final Widget? trailing;
   final Widget? leading;
   final Widget? statusPill;
   final ScrollController? scrollController;
 
-  const SafeTextAppBar({super.key, this.trailing, this.leading, this.statusPill, this.scrollController});
+  const SafeTextAppBar({
+    super.key,
+    this.title,
+    this.trailing,
+    this.leading,
+    this.statusPill,
+    this.scrollController,
+  });
 
   @override
   State<SafeTextAppBar> createState() => _SafeTextAppBarState();
@@ -59,7 +68,7 @@ class _SafeTextAppBarState extends State<SafeTextAppBar> with SingleTickerProvid
                       height: 36,
                       decoration: BoxDecoration(
                         color: scheme.surface,
-                        borderRadius: BorderRadius.circular(4),
+                        borderRadius: BorderRadius.circular(AppRadius.sm),
                         border: Border.all(color: scheme.outline, width: 2.0),
                       ),
                       child: Icon(Icons.shield_rounded, color: scheme.primary, size: 20),
@@ -67,9 +76,9 @@ class _SafeTextAppBarState extends State<SafeTextAppBar> with SingleTickerProvid
                   },
                 ),
               if (widget.leading == null) const SizedBox(width: 12),
-              const Text(
-                'SAFETEXT',
-                style: TextStyle(
+              Text(
+                widget.title?.toUpperCase() ?? 'SAFETEXT',
+                style: const TextStyle(
                   fontSize: 20,
                   fontWeight: FontWeight.w900,
                   letterSpacing: -0.5,
@@ -82,7 +91,7 @@ class _SafeTextAppBarState extends State<SafeTextAppBar> with SingleTickerProvid
                 height: 38,
                 decoration: BoxDecoration(
                   color: scheme.surface,
-                  borderRadius: BorderRadius.circular(4),
+                  borderRadius: BorderRadius.circular(AppRadius.sm),
                   border: Border.all(color: scheme.outline, width: 2.0),
                 ),
                 child: Center(child: widget.trailing ?? Icon(Icons.lock_rounded, color: scheme.onSurface, size: 20)),
