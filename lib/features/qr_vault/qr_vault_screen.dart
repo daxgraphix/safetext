@@ -24,7 +24,6 @@ import '../../shared/widgets/app_buttons.dart';
 import '../../shared/widgets/grid_painter.dart';
 import '../../shared/widgets/result_sheet.dart';
 import '../../shared/widgets/safetext_app_bar.dart';
-import '../../shared/dialogs/security_gate_dialog.dart';
 
 const _uuid = Uuid();
 
@@ -37,8 +36,6 @@ class QRVaultScreen extends ConsumerStatefulWidget {
 
 class _QRVaultScreenState extends ConsumerState<QRVaultScreen> with SingleTickerProviderStateMixin {
   late TabController _tabController;
-  bool _isAuthenticated = false;
-  bool _isAuthenticating = true;
 
   final MobileScannerController _scannerController = MobileScannerController(
     detectionSpeed: DetectionSpeed.noDuplicates,
@@ -62,18 +59,6 @@ class _QRVaultScreenState extends ConsumerState<QRVaultScreen> with SingleTicker
     super.initState();
     _tabController = TabController(length: 2, vsync: this);
     _tabController.addListener(_handleTabChange);
-    _authenticate();
-  }
-
-  Future<void> _authenticate() async {
-    setState(() => _isAuthenticating = true);
-    final success = await SecurityGateDialog.show(context);
-    if (mounted) {
-      setState(() {
-        _isAuthenticated = success;
-        _isAuthenticating = false;
-      });
-    }
   }
 
   void _handleTabChange() {
@@ -305,73 +290,6 @@ class _QRVaultScreenState extends ConsumerState<QRVaultScreen> with SingleTicker
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
-
-    if (_isAuthenticating) {
-      return Scaffold(
-        backgroundColor: scheme.surface,
-        body: const Center(child: CircularProgressIndicator()),
-      );
-    }
-
-    if (!_isAuthenticated) {
-      return Scaffold(
-        appBar: SafeTextAppBar(
-          title: 'QR VAULT',
-          leading: IconButton(
-            icon: const Icon(Icons.arrow_back_rounded),
-            onPressed: () => context.pop(),
-          ),
-        ),
-        body: GridBackground(
-          child: Center(
-            child: Padding(
-              padding: const EdgeInsets.all(32),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Container(
-                    width: 80,
-                    height: 80,
-                    decoration: BoxDecoration(
-                      color: scheme.surface,
-                      border: Border.all(color: scheme.outline, width: 2),
-                      borderRadius: BorderRadius.circular(AppRadius.sm),
-                    ),
-                    child: Icon(Icons.lock_outline_rounded, size: 36, color: scheme.primary),
-                  ),
-                  const SizedBox(height: 24),
-                  const Text(
-                    'PIN REQUIRED',
-                    textAlign: TextAlign.center,
-                    style: TextStyle(
-                      fontSize: 18,
-                      fontWeight: FontWeight.w900,
-                      letterSpacing: 1.0,
-                    ),
-                  ),
-                  const SizedBox(height: 16),
-                  const Text(
-                    'SECURITY VERIFICATION IS REQUIRED TO ACCESS THE SECURE QR VAULT.',
-                    textAlign: TextAlign.center,
-                    style: TextStyle(
-                      fontSize: 11,
-                      fontWeight: FontWeight.w700,
-                      color: Colors.grey,
-                      height: 1.5,
-                    ),
-                  ),
-                  const SizedBox(height: 32),
-                  PrimaryButton(
-                    label: 'AUTHENTICATE',
-                    onPressed: _authenticate,
-                  ),
-                ],
-              ),
-            ),
-          ),
-        ),
-      );
-    }
 
     return Scaffold(
       appBar: SafeTextAppBar(

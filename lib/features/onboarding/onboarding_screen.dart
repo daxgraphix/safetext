@@ -101,7 +101,10 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> with Ticker
   }
 
   final _pinController = TextEditingController();
+  final _confirmController = TextEditingController();
   String? _pinError;
+  bool _isConfirming = false;
+  String _firstPin = '';
 
   @override
   void dispose() {
@@ -109,6 +112,7 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> with Ticker
     _pulseController.dispose();
     _shimmerController.dispose();
     _pinController.dispose();
+    _confirmController.dispose();
     super.dispose();
   }
 
@@ -117,11 +121,38 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> with Ticker
       await ref.read(settingsRepositoryProvider).setOnboardingComplete(true);
       if (mounted) context.go(AppRoutes.home);
     } else {
-      // If we're on the last page and PIN isn't set, show error or focus
       if (_page == _pages.length - 1) {
         setState(() => _pinError = 'PIN IS REQUIRED TO CONTINUE');
       } else {
         _controller.animateToPage(_pages.length - 1, duration: const Duration(milliseconds: 500), curve: Curves.easeOutQuart);
+      }
+    }
+  }
+
+  void _handlePinSubmit(String value) {
+    if (value.length < 4) return;
+    
+    if (!_isConfirming) {
+      setState(() {
+        _firstPin = value;
+        _isConfirming = true;
+        _pinController.clear();
+        _pinError = null;
+      });
+    } else {
+      if (value == _firstPin) {
+        ref.read(settingsProvider.notifier).setAppPassword(value);
+        setState(() => _pinError = null);
+        _finish();
+      } else {
+        setState(() {
+          _pinError = 'PINS DO NOT MATCH. TRY AGAIN.';
+          _pinController.clear();
+          // We don't reset _isConfirming, just let them try confirmation again or we can reset to first step?
+          // Usually reset to first step is clearer if they messed up the first one.
+          _isConfirming = false;
+          _firstPin = '';
+        });
       }
     }
   }
@@ -158,10 +189,10 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> with Ticker
                           page: _pages[index],
                           controller: _pinController,
                           error: _pinError,
+                          isConfirming: _isConfirming,
                           onChanged: (v) {
                             if (v.length >= 4) {
-                              ref.read(settingsProvider.notifier).setAppPassword(v);
-                              setState(() => _pinError = null);
+                              _handlePinSubmit(v);
                             }
                           },
                         );
@@ -543,12 +574,14 @@ class _PinSetupView extends StatelessWidget {
   final _OnboardPage page;
   final TextEditingController controller;
   final String? error;
+  final bool isConfirming;
   final ValueChanged<String> onChanged;
 
   const _PinSetupView({
     required this.page,
     required this.controller,
     required this.error,
+    required this.isConfirming,
     required this.onChanged,
   });
 
@@ -568,11 +601,11 @@ class _PinSetupView extends StatelessWidget {
               border: Border.all(color: scheme.outline, width: 2.0),
               borderRadius: BorderRadius.circular(AppRadius.sm),
             ),
-            child: Icon(page.icon, size: 64, color: scheme.primary),
+            child: Icon(isConfirming ? Icons.verified_user_rounded : page.icon, size: 64, color: scheme.primary),
           ),
           const SizedBox(height: 32),
           Text(
-            page.title.toUpperCase(),
+            (isConfirming ? 'CONFIRM PIN' : page.title).toUpperCase(),
             textAlign: TextAlign.center,
             style: const TextStyle(
               fontSize: 24,
@@ -582,7 +615,7 @@ class _PinSetupView extends StatelessWidget {
           ),
           const SizedBox(height: 16),
           Text(
-            page.description.toUpperCase(),
+            (isConfirming ? 'RE-ENTER YOUR PIN TO VERIFY' : page.description).toUpperCase(),
             textAlign: TextAlign.center,
             style: TextStyle(
               color: scheme.onSurface.withValues(alpha: 0.7),
@@ -595,7 +628,7 @@ class _PinSetupView extends StatelessWidget {
             controller: controller,
             onChanged: onChanged,
             errorText: error,
-            counterText: 'MINIMUM 4 DIGITS',
+            counterText: isConfirming ? 'MATCH PINS' : 'MINIMUM 4 DIGITS',
           ),
         ],
       ),

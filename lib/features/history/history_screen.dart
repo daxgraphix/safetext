@@ -9,7 +9,6 @@ import '../../core/services/export_service.dart';
 import '../../core/utils/formatters.dart';
 import '../../data/models/history_entry.dart';
 import '../../shared/dialogs/confirm_dialog.dart';
-import '../../shared/dialogs/security_gate_dialog.dart';
 import '../../shared/widgets/activity_tile.dart';
 import '../../shared/widgets/app_buttons.dart';
 import '../../shared/widgets/status_chip.dart';
@@ -32,8 +31,6 @@ class _HistoryScreenState extends ConsumerState<HistoryScreen> {
   String _query = '';
   final Set<String> _selectedIds = {};
   bool _isSelectionMode = false;
-  bool _isAuthenticated = false;
-  bool _isAuthenticating = true;
 
   final _searchController = TextEditingController();
   final _scrollController = ScrollController();
@@ -41,18 +38,6 @@ class _HistoryScreenState extends ConsumerState<HistoryScreen> {
   @override
   void initState() {
     super.initState();
-    _authenticate();
-  }
-
-  Future<void> _authenticate() async {
-    setState(() => _isAuthenticating = true);
-    final success = await SecurityGateDialog.show(context);
-    if (mounted) {
-      setState(() {
-        _isAuthenticated = success;
-        _isAuthenticating = false;
-      });
-    }
   }
 
   @override
@@ -322,68 +307,6 @@ class _HistoryScreenState extends ConsumerState<HistoryScreen> {
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
-
-    if (_isAuthenticating) {
-      return Scaffold(
-        backgroundColor: scheme.surface,
-        body: const Center(child: CircularProgressIndicator()),
-      );
-    }
-
-    if (!_isAuthenticated) {
-      return Scaffold(
-        backgroundColor: scheme.surface,
-        appBar: const SafeTextAppBar(title: 'HISTORY'),
-        body: GridBackground(
-          child: Center(
-            child: Padding(
-              padding: const EdgeInsets.all(32),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Container(
-                    width: 80,
-                    height: 80,
-                    decoration: BoxDecoration(
-                      color: scheme.surface,
-                      border: Border.all(color: scheme.outline, width: 2),
-                      borderRadius: BorderRadius.circular(AppRadius.sm),
-                    ),
-                    child: Icon(Icons.lock_outline_rounded, size: 36, color: scheme.primary),
-                  ),
-                  const SizedBox(height: 24),
-                  const Text(
-                    'HISTORY LOCKED',
-                    textAlign: TextAlign.center,
-                    style: TextStyle(
-                      fontSize: 18,
-                      fontWeight: FontWeight.w900,
-                      letterSpacing: 1.0,
-                    ),
-                  ),
-                  const SizedBox(height: 16),
-                  const Text(
-                    'AUTHENTICATION IS REQUIRED TO VIEW THE AUDIT LOGS.',
-                    textAlign: TextAlign.center,
-                    style: TextStyle(
-                      fontSize: 11,
-                      fontWeight: FontWeight.w700,
-                      color: Colors.grey,
-                      height: 1.5,
-                    ),
-                  ),
-                  const SizedBox(height: 32),
-                  PrimaryButton(
-                    label: 'UNLOCK HISTORY',
-                    onPressed: _authenticate,
-                  ),
-                ],
-              ),
-            ),
-          ),
-        ),
-      );
-    }
 
     final history = ref.watch(historyProvider);
 
