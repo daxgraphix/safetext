@@ -12,6 +12,7 @@ import '../features/history/history_screen.dart';
 import '../features/home/home_screen.dart';
 import '../features/onboarding/onboarding_screen.dart';
 import '../features/password_generator/password_generator_screen.dart';
+import '../features/qr_vault/qr_vault_screen.dart';
 import '../features/security_center/security_center_screen.dart';
 import '../features/settings/settings_screen.dart';
 import '../features/splash/splash_screen.dart';
@@ -40,6 +41,7 @@ class AppRoutes {
   static const stegoLsbDes = '/steganography/lsb-des';
   static const passwordGenerator = '/password-generator';
   static const caesarCipher = '/caesar-cipher';
+  static const qrVault = '/qr-vault';
 }
 
 /// A helper to create consistent slide+fade transitions for full-screen flows.
@@ -172,6 +174,14 @@ final routerProvider = Provider<GoRouter>((ref) {
           context: context,
           state: state,
           child: const CaesarCipherScreen(),
+        ),
+      ),
+      GoRoute(
+        path: AppRoutes.qrVault,
+        pageBuilder: (context, state) => _buildPageWithTransition(
+          context: context,
+          state: state,
+          child: const QRVaultScreen(),
         ),
       ),
     ],

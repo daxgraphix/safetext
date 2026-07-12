@@ -1,10 +1,55 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import '../../app/providers.dart';
 import '../../app/routes.dart';
+import '../dialogs/security_gate_dialog.dart';
 
-class AppShell extends StatelessWidget {
+class AppShell extends ConsumerStatefulWidget {
   final Widget child;
   const AppShell({super.key, required this.child});
+
+  @override
+  ConsumerState<AppShell> createState() => _AppShellState();
+}
+
+class _AppShellState extends ConsumerState<AppShell> with WidgetsBindingObserver {
+  bool _isLocked = false;
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addObserver(this);
+  }
+
+  @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed && _isLocked) {
+      _showLockScreen();
+    } else if (state == AppLifecycleState.paused) {
+      final settings = ref.read(settingsProvider);
+      if (settings.isPasswordSet) {
+        _isLocked = true;
+      }
+    }
+  }
+
+  Future<void> _showLockScreen() async {
+    final authenticated = await SecurityGateDialog.show(
+      context,
+      title: 'APP LOCKED',
+      message: 'AUTHENTICATION IS REQUIRED TO RESUME.',
+    );
+    if (authenticated) {
+      setState(() => _isLocked = false);
+    }
+  }
 
   static const _tabs = [
     (AppRoutes.home, Icons.home_rounded, Icons.home_outlined, 'Home'),
@@ -25,7 +70,7 @@ class AppShell extends StatelessWidget {
 
     return Scaffold(
       extendBody: true,
-      body: child,
+      body: widget.child,
       bottomNavigationBar: _FloatingNavBar(
         currentIndex: currentIndex,
         onTap: (index) => context.go(_tabs[index].$1),

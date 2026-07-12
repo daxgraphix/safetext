@@ -8,6 +8,7 @@ class AppColors {
   static const Color white = Color(0xFFFFFFFF);
   static const Color red = Color(0xFFD32F2F); // High visibility red
   static const Color green = Color(0xFF2E7D32); // High visibility green
+  static const Color blue = Color(0xFF1976D2); // High visibility blue
 
   // Light Theme (Default)
   static const Color lightSurface = white;

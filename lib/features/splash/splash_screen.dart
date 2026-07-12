@@ -1,11 +1,13 @@
 import 'dart:math';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../app/providers.dart';
 import '../../app/routes.dart';
 import '../../app/theme/app_theme.dart';
+import '../../shared/dialogs/security_gate_dialog.dart';
 
 class SplashScreen extends ConsumerStatefulWidget {
   final bool onboardingComplete;
@@ -66,7 +68,35 @@ class _SplashScreenState extends ConsumerState<SplashScreen> with TickerProvider
 
     await Future.delayed(const Duration(milliseconds: 2800));
     if (!mounted) return;
-    context.go(widget.onboardingComplete ? AppRoutes.home : AppRoutes.onboarding);
+
+    if (!widget.onboardingComplete) {
+      context.go(AppRoutes.onboarding);
+      return;
+    }
+
+    // Require authentication on app open if password is set
+    if (settings.isPasswordSet) {
+      final authenticated = await SecurityGateDialog.show(
+        context,
+        title: 'APP LOCKED',
+        message: 'PLEASE AUTHENTICATE TO UNLOCK YOUR SECURE VAULT.',
+      );
+      if (!authenticated) {
+        // If they cancel or fail, we can't let them in.
+        // We could exit the app or just stay on splash.
+        // For UX, let's keep them on splash with a button to retry if needed,
+        // but SecurityGateDialog is non-dismissible and has its own UI.
+        // If show returns false, it means they cancelled.
+        // On splash, we probably shouldn't allow cancel to just stay there.
+        // Let's re-trigger or handle exit.
+        SystemNavigator.pop();
+        return;
+      }
+    }
+
+    if (mounted) {
+      context.go(AppRoutes.home);
+    }
   }
 
   @override

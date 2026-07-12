@@ -28,6 +28,8 @@ class HistoryTool {
   static const String passwordGenerator = 'password_generator';
   static const String caesarEncrypt = 'caesar_encrypt';
   static const String caesarDecrypt = 'caesar_decrypt';
+  static const String qrGenerate = 'qr_generate';
+  static const String qrScan = 'qr_scan';
 }
 
 @HiveType(typeId: 2)

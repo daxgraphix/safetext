@@ -11,6 +11,7 @@ class ActivityTile extends StatefulWidget {
   final String? statusLabel;
   final StatusTone statusTone;
   final VoidCallback? onTap;
+  final VoidCallback? onLongPress;
   final VoidCallback? onViewDetails;
 
   const ActivityTile({
@@ -23,6 +24,7 @@ class ActivityTile extends StatefulWidget {
     this.statusLabel,
     this.statusTone = StatusTone.success,
     this.onTap,
+    this.onLongPress,
     this.onViewDetails,
   });
 
@@ -40,6 +42,7 @@ class _ActivityTileState extends State<ActivityTile> {
       color: Colors.transparent,
       child: InkWell(
         onTap: widget.onTap,
+        onLongPress: widget.onLongPress,
         onTapDown: (_) => setState(() => _pressed = true),
         onTapCancel: () => setState(() => _pressed = false),
         onTapUp: (_) => setState(() => _pressed = false),

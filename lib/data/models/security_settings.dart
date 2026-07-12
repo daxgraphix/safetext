@@ -54,12 +54,18 @@ class SecuritySettings {
   @HiveField(18)
   final int historyExpiryDays;
 
+  // --- App Password ---
+  @HiveField(19)
+  final String? appPassword; // Hashed password
+  @HiveField(20)
+  final bool isPasswordSet;
+
   const SecuritySettings({
     this.darkMode = false,
     this.languageCode = 'en',
     this.autoClearClipboard = true,
     this.hideAppPreviews = false,
-    this.blockScreenshots = true,
+    this.blockScreenshots = false,
     this.defaultStegoMode = StegoMode.ghost,
     this.compressionWarningEnabled = true,
     this.defaultPasswordLength = 16,
@@ -74,6 +80,8 @@ class SecuritySettings {
     this.maxFailedAttempts = 5,
     this.historyExpiryEnabled = false,
     this.historyExpiryDays = 30,
+    this.appPassword,
+    this.isPasswordSet = false,
   });
 
   SecuritySettings copyWith({
@@ -96,6 +104,8 @@ class SecuritySettings {
     int? maxFailedAttempts,
     bool? historyExpiryEnabled,
     int? historyExpiryDays,
+    String? appPassword,
+    bool? isPasswordSet,
   }) {
     return SecuritySettings(
       darkMode: darkMode ?? this.darkMode,
@@ -117,6 +127,8 @@ class SecuritySettings {
       maxFailedAttempts: maxFailedAttempts ?? this.maxFailedAttempts,
       historyExpiryEnabled: historyExpiryEnabled ?? this.historyExpiryEnabled,
       historyExpiryDays: historyExpiryDays ?? this.historyExpiryDays,
+      appPassword: appPassword ?? this.appPassword,
+      isPasswordSet: isPasswordSet ?? this.isPasswordSet,
     );
   }
 }

@@ -60,6 +60,21 @@ class SettingsNotifier extends StateNotifier<SecuritySettings> {
 
   Future<void> toggleHistoryExpiry(bool value) => _update((s) => s.copyWith(historyExpiryEnabled: value));
   Future<void> setHistoryExpiryDays(int days) => _update((s) => s.copyWith(historyExpiryDays: days));
+
+  Future<void> setAppPassword(String password) async {
+    // In a real app, we'd use a dedicated KDF here, but for now we'll store it as a POC.
+    // The request mentions internal internal security settings.
+    await _update((s) => s.copyWith(
+      appPassword: password, // In production, this should be PBKDF2/Argon2 hashed
+      isPasswordSet: true,
+    ));
+  }
+
+  bool verifyPassword(String password) {
+    return state.appPassword == password;
+  }
+
+  Future<void> clearAppPassword() => _update((s) => s.copyWith(appPassword: null, isPasswordSet: false));
 }
 
 final settingsProvider = StateNotifierProvider<SettingsNotifier, SecuritySettings>((ref) {

@@ -5,71 +5,20 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../app/providers.dart';
 import '../../app/theme/app_theme.dart';
 import '../../app/theme/app_colors.dart';
+import '../../core/services/export_service.dart';
 import '../../core/utils/formatters.dart';
 import '../../data/models/history_entry.dart';
 import '../../shared/dialogs/confirm_dialog.dart';
+import '../../shared/dialogs/security_gate_dialog.dart';
 import '../../shared/widgets/activity_tile.dart';
+import '../../shared/widgets/app_buttons.dart';
 import '../../shared/widgets/status_chip.dart';
 import '../../shared/widgets/grid_painter.dart';
 import '../../shared/widgets/safetext_app_bar.dart';
+import '../encode/widgets/particle_burst.dart';
+import '../security_center/providers/integrity_provider.dart';
 
 enum _Filter { all, encoded, decoded, tools }
-
-class _EntryMeta {
-  final IconData icon;
-  final Color color;
-  final String title;
-  final String subtitle;
-  final String trailingText;
-  const _EntryMeta({required this.icon, required this.color, required this.title, required this.subtitle, required this.trailingText});
-}
-
-_EntryMeta _metaFor(HistoryEntry entry, ColorScheme scheme) {
-  switch (entry.toolId) {
-    case HistoryTool.lsbText:
-      return _EntryMeta(
-        icon: entry.operation == HistoryOperation.encoded ? Icons.image_search_rounded : Icons.visibility_rounded,
-        color: AppColors.green,
-        title: 'LSB ON TEXT · ${entry.imageName.toUpperCase()}',
-        subtitle: '${Formatters.timestamp(entry.timestamp)}  ·  PLAIN LSB',
-        trailingText: entry.operation == HistoryOperation.encoded ? 'HIDDEN' : 'REVEALED',
-      );
-    case HistoryTool.lsbDes:
-      return _EntryMeta(
-        icon: entry.operation == HistoryOperation.encoded ? Icons.enhanced_encryption_rounded : Icons.no_encryption_rounded,
-        color: AppColors.red,
-        title: 'LSB WITH DES · ${entry.imageName.toUpperCase()}',
-        subtitle: '${Formatters.timestamp(entry.timestamp)}  ·  DES-CBC',
-        trailingText: entry.operation == HistoryOperation.encoded ? 'ENCRYPTED' : 'DECRYPTED',
-      );
-    case HistoryTool.passwordGenerator:
-      return _EntryMeta(
-        icon: Icons.password_rounded,
-        color: AppColors.green,
-        title: 'PASSWORD GENERATED',
-        subtitle: '${Formatters.timestamp(entry.timestamp)}  ·  ${entry.imageName.toUpperCase()}',
-        trailingText: 'NOT STORED',
-      );
-    case HistoryTool.caesarEncrypt:
-    case HistoryTool.caesarDecrypt:
-      return _EntryMeta(
-        icon: Icons.abc_rounded,
-        color: scheme.primary,
-        title: entry.operation == HistoryOperation.encoded ? 'CAESAR ENCRYPTED' : 'CAESAR DECRYPTED',
-        subtitle: '${Formatters.timestamp(entry.timestamp)}  ·  ${entry.imageName.toUpperCase()}',
-        trailingText: 'CIPHER',
-      );
-    case HistoryTool.safetext:
-    default:
-      return _EntryMeta(
-        icon: entry.operation == HistoryOperation.encoded ? Icons.lock_rounded : Icons.lock_open_rounded,
-        color: entry.operation == HistoryOperation.encoded ? scheme.primary : AppColors.red,
-        title: entry.imageName.toUpperCase(),
-        subtitle: '${Formatters.timestamp(entry.timestamp)}  ·  ${(entry.cipherAlgorithm ?? entry.mode).toUpperCase()}',
-        trailingText: entry.operation == HistoryOperation.encoded ? 'ENCODED' : 'DECODED',
-      );
-  }
-}
 
 class HistoryScreen extends ConsumerStatefulWidget {
   const HistoryScreen({super.key});
@@ -81,8 +30,30 @@ class HistoryScreen extends ConsumerStatefulWidget {
 class _HistoryScreenState extends ConsumerState<HistoryScreen> {
   _Filter _filter = _Filter.all;
   String _query = '';
-  final TextEditingController _searchController = TextEditingController();
-  final ScrollController _scrollController = ScrollController();
+  final Set<String> _selectedIds = {};
+  bool _isSelectionMode = false;
+  bool _isAuthenticated = false;
+  bool _isAuthenticating = true;
+
+  final _searchController = TextEditingController();
+  final _scrollController = ScrollController();
+
+  @override
+  void initState() {
+    super.initState();
+    _authenticate();
+  }
+
+  Future<void> _authenticate() async {
+    setState(() => _isAuthenticating = true);
+    final success = await SecurityGateDialog.show(context);
+    if (mounted) {
+      setState(() {
+        _isAuthenticated = success;
+        _isAuthenticating = false;
+      });
+    }
+  }
 
   @override
   void dispose() {
@@ -91,240 +62,123 @@ class _HistoryScreenState extends ConsumerState<HistoryScreen> {
     super.dispose();
   }
 
-  @override
-  Widget build(BuildContext context) {
-    final scheme = Theme.of(context).colorScheme;
-    final history = ref.watch(historyProvider);
+  Future<void> _exportHistory(BuildContext context, List<HistoryEntry> history) async {
+    HapticFeedback.mediumImpact();
+    final integrity = await ref.read(integrityProvider.future);
+    final exportService = ref.read(exportServiceProvider);
 
-    final filtered = history.where((e) {
-      switch (_filter) {
-        case _Filter.encoded:
-          if (e.operation != HistoryOperation.encoded) return false;
-          break;
-        case _Filter.decoded:
-          if (e.operation != HistoryOperation.decoded) return false;
-          break;
-        case _Filter.tools:
-          if (e.toolId == HistoryTool.safetext) return false;
-          break;
-        case _Filter.all:
-          break;
-      }
-      if (_query.isNotEmpty && !e.imageName.toLowerCase().contains(_query.toLowerCase())) return false;
-      return true;
-    }).toList();
+    if (!context.mounted) return;
 
-    final grouped = <String, List<HistoryEntry>>{};
-    for (final entry in filtered) {
-      final label = Formatters.dateLabel(entry.timestamp);
-      grouped.putIfAbsent(label, () => []).add(entry);
-    }
-
-    return Scaffold(
-      backgroundColor: scheme.surface,
-      appBar: SafeTextAppBar(
-        scrollController: _scrollController,
-        trailing: IconButton(
-          icon: const Icon(Icons.delete_sweep_outlined, size: 20),
-          tooltip: 'Clear history',
-          onPressed: history.isEmpty
-              ? null
-              : () async {
-                  await HapticFeedback.lightImpact();
-                  if (!context.mounted) return;
-                  final confirmed = await showConfirmDialog(
-                    context,
-                    title: 'Clear History',
-                    message: 'This permanently deletes all secure history metadata. Action history cannot be recovered once cleared.',
-                    confirmLabel: 'Clear All',
-                    danger: true,
-                  );
-                  if (confirmed != true) return;
-                  if (!context.mounted) return;
-                  ref.read(historyProvider.notifier).clearAllWithUndo();
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(
-                      backgroundColor: scheme.onSurface,
-                      content: Text('HISTORY CLEARED', style: TextStyle(color: scheme.surface, fontWeight: FontWeight.w900, fontSize: 11)),
-                      behavior: SnackBarBehavior.floating,
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(AppRadius.sm),
-                        side: BorderSide(color: scheme.outline, width: 2.0),
-                      ),
-                      action: SnackBarAction(
-                        label: 'UNDO',
-                        textColor: AppColors.green,
-                        onPressed: () => ref.read(historyProvider.notifier).restoreLastCleared(),
-                      ),
-                      duration: const Duration(seconds: 5),
-                    ),
-                  );
-                },
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.transparent,
+      builder: (context) => Container(
+        decoration: BoxDecoration(
+          color: Theme.of(context).colorScheme.surface,
+          border: Border(top: BorderSide(color: Theme.of(context).colorScheme.onSurface, width: 2)),
         ),
-      ),
-      body: GridBackground(
+        padding: const EdgeInsets.all(24),
         child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Padding(
-              padding: const EdgeInsets.fromLTRB(AppSpacing.margin, 18, AppSpacing.margin, 16),
-              child: Column(
-                children: [
-                  Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 16),
-                    decoration: BoxDecoration(
-                      color: scheme.surface,
-                      borderRadius: BorderRadius.circular(AppRadius.sm),
-                      border: Border.all(color: scheme.outline, width: 2.0),
-                    ),
-                    child: TextField(
-                      controller: _searchController,
-                      onChanged: (v) => setState(() => _query = v),
-                      style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w900, letterSpacing: 1.0, fontFamily: 'Roboto Mono'),
-                      decoration: InputDecoration(
-                        filled: false,
-                        hintText: 'SEARCH SECURE LOGS...',
-                        hintStyle: TextStyle(color: scheme.onSurface.withValues(alpha: 0.5), fontWeight: FontWeight.w700, letterSpacing: 1.0),
-                        prefixIcon: Icon(Icons.search_rounded, color: scheme.onSurface, size: 20),
-                        prefixIconConstraints: const BoxConstraints(minWidth: 40),
-                        border: InputBorder.none,
-                        enabledBorder: InputBorder.none,
-                        focusedBorder: InputBorder.none,
-                        contentPadding: const EdgeInsets.symmetric(vertical: 14),
-                        suffixIcon: _query.isNotEmpty
-                            ? IconButton(
-                                icon: const Icon(Icons.close_rounded, size: 18),
-                                onPressed: () {
-                                  _searchController.clear();
-                                  setState(() => _query = '');
-                                },
-                              )
-                            : null,
-                      ),
-                    ),
-                  ),
-                  const SizedBox(height: 16),
-                  SingleChildScrollView(
-                    scrollDirection: Axis.horizontal,
-                    child: Row(
-                      children: [
-                        _FilterChip(label: 'All Activity', selected: _filter == _Filter.all, onTap: () => setState(() => _filter = _Filter.all)),
-                        const SizedBox(width: 8),
-                        _FilterChip(label: 'Encoded', selected: _filter == _Filter.encoded, onTap: () => setState(() => _filter = _Filter.encoded)),
-                        const SizedBox(width: 8),
-                        _FilterChip(label: 'Decoded', selected: _filter == _Filter.decoded, onTap: () => setState(() => _filter = _Filter.decoded)),
-                        const SizedBox(width: 8),
-                        _FilterChip(label: 'Utilities', selected: _filter == _Filter.tools, onTap: () => setState(() => _filter = _Filter.tools)),
-                      ],
-                    ),
-                  ),
-                ],
-              ),
+            const Text(
+              'EXPORT HISTORY',
+              style: TextStyle(fontSize: 18, fontWeight: FontWeight.w900, letterSpacing: 1.0),
             ),
-            Expanded(
-              child: filtered.isEmpty
-                  ? Center(
-                      child: Padding(
-                        padding: const EdgeInsets.all(32),
-                        child: Column(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Container(
-                              width: 80,
-                              height: 80,
-                              decoration: BoxDecoration(
-                                color: scheme.surface,
-                                border: Border.all(color: scheme.outline, width: 2),
-                                borderRadius: BorderRadius.circular(AppRadius.sm),
-                              ),
-                              child: Icon(Icons.history_rounded, size: 36, color: scheme.primary),
-                            ),
-                            const SizedBox(height: 24),
-                            Text(
-                              (_query.isEmpty ? 'No History Yet' : 'No Results Found').toUpperCase(),
-                              style: const TextStyle(
-                                fontSize: 18,
-                                fontWeight: FontWeight.w900,
-                                letterSpacing: 1.0,
-                              ),
-                            ),
-                            const SizedBox(height: 16),
-                            Text(
-                              (_query.isEmpty
-                                  ? 'Your secure operations will appear here as you use the app.'
-                                  : 'Try adjusting your search or filters to find what you\'re looking for.').toUpperCase(),
-                              textAlign: TextAlign.center,
-                              style: TextStyle(
-                                fontSize: 11,
-                                fontWeight: FontWeight.w700,
-                                color: scheme.onSurface.withValues(alpha: 0.85),
-                                height: 1.5,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    )
-                  : ListView.builder(
-                      controller: _scrollController,
-                      padding: const EdgeInsets.fromLTRB(AppSpacing.margin, 0, AppSpacing.margin, 110),
-                      itemCount: grouped.length,
-                      itemBuilder: (context, index) {
-                        final section = grouped.entries.elementAt(index);
-                        return Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Padding(
-                              padding: const EdgeInsets.fromLTRB(4, 12, 0, 12),
-                              child: Text(
-                                section.key.toUpperCase(),
-                                style: TextStyle(
-                                  fontSize: 11,
-                                  fontWeight: FontWeight.w900,
-                                  letterSpacing: 2.0,
-                                  color: scheme.primary,
-                                ),
-                              ),
-                            ),
-                            ...section.value.map((entry) {
-                              final meta = _metaFor(entry, scheme);
-                              return Padding(
-                                padding: const EdgeInsets.only(bottom: 12),
-                                child: Dismissible(
-                                  key: ValueKey(entry.id),
-                                  direction: DismissDirection.endToStart,
-                                  background: Container(
-                                    alignment: Alignment.centerRight,
-                                    padding: const EdgeInsets.only(right: 20),
-                                    decoration: BoxDecoration(
-                                      color: AppColors.red,
-                                      borderRadius: BorderRadius.circular(AppRadius.sm),
-                                      border: Border.all(color: scheme.outline, width: 2),
-                                    ),
-                                    child: Icon(Icons.delete_outline_rounded, color: scheme.onError),
-                                  ),
-                                  onDismissed: (_) {
-                                    ref.read(historyProvider.notifier).delete(entry.id);
-                                    HapticFeedback.lightImpact();
-                                  },
-                                  child: ActivityTile(
-                                    icon: meta.icon,
-                                    iconColor: meta.color,
-                                    title: meta.title,
-                                    subtitle: meta.subtitle,
-                                    trailingText: meta.trailingText,
-                                    statusLabel: entry.status == HistoryStatus.success ? 'SECURE' : 'FAILED',
-                                    statusTone: entry.status == HistoryStatus.success ? StatusTone.success : StatusTone.danger,
-                                    onTap: () => _showEntryDetails(context, entry, meta),
-                                  ),
-                                ),
-                              );
-                            }),
-                          ],
-                        );
-                      },
-                    ),
+            const SizedBox(height: 20),
+            Row(
+              children: [
+                Expanded(
+                  child: SecondaryButton(
+                    label: 'TEXT FILE',
+                    icon: Icons.description_rounded,
+                    onPressed: () {
+                      Navigator.pop(context);
+                      exportService.shareTextReport(history: history, integrity: integrity);
+                    },
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: SecondaryButton(
+                    label: 'PDF REPORT',
+                    icon: Icons.picture_as_pdf_rounded,
+                    onPressed: () {
+                      Navigator.pop(context);
+                      _showPdfPasswordDialog(context, history, integrity);
+                    },
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 12),
+            PrimaryButton(
+              label: 'PRINT HISTORY',
+              icon: Icons.print_rounded,
+              onPressed: () {
+                Navigator.pop(context);
+                exportService.printReport(history: history, integrity: integrity);
+              },
             ),
           ],
+        ),
+      ),
+    );
+  }
+
+  void _showPdfPasswordDialog(BuildContext context, List<HistoryEntry> history, dynamic integrity) {
+    final passwordController = TextEditingController();
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (context) => Padding(
+        padding: EdgeInsets.only(bottom: MediaQuery.of(context).viewInsets.bottom),
+        child: Container(
+          decoration: BoxDecoration(
+            color: Theme.of(context).colorScheme.surface,
+            border: Border(top: BorderSide(color: Theme.of(context).colorScheme.onSurface, width: 2)),
+          ),
+          padding: const EdgeInsets.all(24),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Text(
+                'ENCRYPT PDF REPORT?',
+                style: TextStyle(fontSize: 18, fontWeight: FontWeight.w900, letterSpacing: 1.0),
+              ),
+              const SizedBox(height: 8),
+              const Text(
+                'OPTIONAL: ADD A PASSWORD TO THE PDF FILE.',
+                style: TextStyle(fontFamily: 'Roboto Mono', fontSize: 11, color: Colors.grey),
+              ),
+              const SizedBox(height: 20),
+              TextField(
+                controller: passwordController,
+                obscureText: true,
+                style: const TextStyle(fontFamily: 'Roboto Mono', fontWeight: FontWeight.bold),
+                decoration: const InputDecoration(
+                  labelText: 'PDF PASSWORD (OPTIONAL)',
+                  hintText: 'LEAVE BLANK FOR NO PASSWORD',
+                ),
+              ),
+              const SizedBox(height: 24),
+              PrimaryButton(
+                label: 'GENERATE PDF',
+                onPressed: () {
+                  final password = passwordController.text;
+                  Navigator.pop(context);
+                  ref.read(exportServiceProvider).sharePdfReport(
+                    history: history,
+                    integrity: integrity,
+                    password: password.isEmpty ? null : password,
+                  );
+                },
+              ),
+            ],
+          ),
         ),
       ),
     );
@@ -464,6 +318,444 @@ class _HistoryScreenState extends ConsumerState<HistoryScreen> {
       ),
     );
   }
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+
+    if (_isAuthenticating) {
+      return Scaffold(
+        backgroundColor: scheme.surface,
+        body: const Center(child: CircularProgressIndicator()),
+      );
+    }
+
+    if (!_isAuthenticated) {
+      return Scaffold(
+        backgroundColor: scheme.surface,
+        appBar: const SafeTextAppBar(title: 'HISTORY'),
+        body: GridBackground(
+          child: Center(
+            child: Padding(
+              padding: const EdgeInsets.all(32),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Container(
+                    width: 80,
+                    height: 80,
+                    decoration: BoxDecoration(
+                      color: scheme.surface,
+                      border: Border.all(color: scheme.outline, width: 2),
+                      borderRadius: BorderRadius.circular(AppRadius.sm),
+                    ),
+                    child: Icon(Icons.lock_outline_rounded, size: 36, color: scheme.primary),
+                  ),
+                  const SizedBox(height: 24),
+                  const Text(
+                    'HISTORY LOCKED',
+                    textAlign: TextAlign.center,
+                    style: TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.w900,
+                      letterSpacing: 1.0,
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                  const Text(
+                    'AUTHENTICATION IS REQUIRED TO VIEW THE AUDIT LOGS.',
+                    textAlign: TextAlign.center,
+                    style: TextStyle(
+                      fontSize: 11,
+                      fontWeight: FontWeight.w700,
+                      color: Colors.grey,
+                      height: 1.5,
+                    ),
+                  ),
+                  const SizedBox(height: 32),
+                  PrimaryButton(
+                    label: 'UNLOCK HISTORY',
+                    onPressed: _authenticate,
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+      );
+    }
+
+    final history = ref.watch(historyProvider);
+
+    final filtered = history.where((e) {
+      switch (_filter) {
+        case _Filter.encoded:
+          if (e.operation != HistoryOperation.encoded) return false;
+          break;
+        case _Filter.decoded:
+          if (e.operation != HistoryOperation.decoded) return false;
+          break;
+        case _Filter.tools:
+          if (e.toolId == HistoryTool.safetext) return false;
+          break;
+        case _Filter.all:
+          break;
+      }
+      if (_query.isNotEmpty && !e.imageName.toLowerCase().contains(_query.toLowerCase())) return false;
+      return true;
+    }).toList();
+
+    final grouped = <String, List<HistoryEntry>>{};
+    for (final entry in filtered) {
+      final label = Formatters.dateLabel(entry.timestamp);
+      grouped.putIfAbsent(label, () => []).add(entry);
+    }
+
+    return Scaffold(
+      backgroundColor: scheme.surface,
+      appBar: SafeTextAppBar(
+        scrollController: _scrollController,
+        title: _isSelectionMode ? '${_selectedIds.length} SELECTED' : null,
+        leading: _isSelectionMode
+            ? IconButton(
+                icon: const Icon(Icons.close_rounded),
+                onPressed: () => setState(() {
+                  _isSelectionMode = false;
+                  _selectedIds.clear();
+                }),
+              )
+            : null,
+        trailing: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            if (_isSelectionMode)
+              IconButton(
+                icon: const Icon(Icons.delete_outline_rounded, color: AppColors.red),
+                tooltip: 'Delete selected',
+                onPressed: _selectedIds.isEmpty
+                    ? null
+                    : () async {
+                        HapticFeedback.heavyImpact();
+                        final confirmed = await showConfirmDialog(
+                          context,
+                          title: 'Delete Selected',
+                          message: 'Permanently remove ${_selectedIds.length} audit logs?',
+                          confirmLabel: 'Delete',
+                          danger: true,
+                        );
+                        if (confirmed == true) {
+                          for (final id in _selectedIds) {
+                            ref.read(historyProvider.notifier).delete(id);
+                          }
+                          setState(() {
+                            _isSelectionMode = false;
+                            _selectedIds.clear();
+                          });
+                        }
+                      },
+              )
+            else ...[
+              IconButton(
+                icon: const Icon(Icons.ios_share_rounded, size: 20),
+                tooltip: 'Export history',
+                onPressed: history.isEmpty ? null : () => _exportHistory(context, history),
+              ),
+              IconButton(
+                icon: const Icon(Icons.delete_sweep_outlined, size: 20),
+                tooltip: 'Clear history',
+                onPressed: history.isEmpty
+                    ? null
+                    : () async {
+                        await HapticFeedback.vibrate();
+                        if (!context.mounted) return;
+                        final confirmed = await showConfirmDialog(
+                          context,
+                          title: 'Clear History',
+                          message: 'This permanently deletes all secure history metadata. Action history cannot be recovered once cleared.',
+                          confirmLabel: 'Clear All',
+                          danger: true,
+                        );
+                        if (confirmed != true) return;
+                        if (!context.mounted) return;
+                        ref.read(historyProvider.notifier).clearAllWithUndo();
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(
+                            backgroundColor: scheme.onSurface,
+                            content: Text('HISTORY CLEARED', style: TextStyle(color: scheme.surface, fontWeight: FontWeight.w900, fontSize: 11)),
+                            behavior: SnackBarBehavior.floating,
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(AppRadius.sm),
+                              side: BorderSide(color: scheme.outline, width: 2.0),
+                            ),
+                            action: SnackBarAction(
+                              label: 'UNDO',
+                              textColor: AppColors.green,
+                              onPressed: () => ref.read(historyProvider.notifier).restoreLastCleared(),
+                            ),
+                            duration: const Duration(seconds: 5),
+                          ),
+                        );
+                      },
+              ),
+            ],
+          ],
+        ),
+      ),
+      body: GridBackground(
+        child: Column(
+          children: [
+            Padding(
+              padding: const EdgeInsets.fromLTRB(AppSpacing.margin, 18, AppSpacing.margin, 16),
+              child: Column(
+                children: [
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 16),
+                    decoration: BoxDecoration(
+                      color: scheme.surface,
+                      borderRadius: BorderRadius.circular(AppRadius.sm),
+                      border: Border.all(color: scheme.outline, width: 2.0),
+                    ),
+                    child: TextField(
+                      controller: _searchController,
+                      onChanged: (v) => setState(() => _query = v),
+                      style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w900, letterSpacing: 1.0, fontFamily: 'Roboto Mono'),
+                      decoration: InputDecoration(
+                        filled: false,
+                        hintText: 'SEARCH SECURE LOGS...',
+                        hintStyle: TextStyle(color: scheme.onSurface.withValues(alpha: 0.5), fontWeight: FontWeight.w700, letterSpacing: 1.0),
+                        prefixIcon: Icon(Icons.search_rounded, color: scheme.onSurface, size: 20),
+                        prefixIconConstraints: const BoxConstraints(minWidth: 40),
+                        border: InputBorder.none,
+                        enabledBorder: InputBorder.none,
+                        focusedBorder: InputBorder.none,
+                        contentPadding: const EdgeInsets.symmetric(vertical: 14),
+                        suffixIcon: _query.isNotEmpty
+                            ? IconButton(
+                                icon: const Icon(Icons.close_rounded, size: 18),
+                                onPressed: () {
+                                  _searchController.clear();
+                                  setState(() => _query = '');
+                                },
+                              )
+                            : null,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                  SingleChildScrollView(
+                    scrollDirection: Axis.horizontal,
+                    child: Row(
+                      children: [
+                        _FilterChip(label: 'All Activity', selected: _filter == _Filter.all, onTap: () => setState(() => _filter = _Filter.all)),
+                        const SizedBox(width: 8),
+                        _FilterChip(label: 'Encoded', selected: _filter == _Filter.encoded, onTap: () => setState(() => _filter = _Filter.encoded)),
+                        const SizedBox(width: 8),
+                        _FilterChip(label: 'Decoded', selected: _filter == _Filter.decoded, onTap: () => setState(() => _filter = _Filter.decoded)),
+                        const SizedBox(width: 8),
+                        _FilterChip(label: 'Utilities', selected: _filter == _Filter.tools, onTap: () => setState(() => _filter = _Filter.tools)),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            Expanded(
+              child: filtered.isEmpty
+                  ? Center(
+                      child: Padding(
+                        padding: const EdgeInsets.all(32),
+                        child: Column(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Container(
+                              width: 80,
+                              height: 80,
+                              decoration: BoxDecoration(
+                                color: scheme.surface,
+                                border: Border.all(color: scheme.outline, width: 2),
+                                borderRadius: BorderRadius.circular(AppRadius.sm),
+                              ),
+                              child: Icon(Icons.history_rounded, size: 36, color: scheme.primary),
+                            ),
+                            const SizedBox(height: 24),
+                            Text(
+                              (_query.isEmpty ? 'No History Yet' : 'No Results Found').toUpperCase(),
+                              style: const TextStyle(
+                                fontSize: 18,
+                                fontWeight: FontWeight.w900,
+                                letterSpacing: 1.0,
+                              ),
+                            ),
+                            const SizedBox(height: 16),
+                            Text(
+                              (_query.isEmpty
+                                  ? 'Your secure operations will appear here as you use the app.'
+                                  : 'Try adjusting your search or filters to find what you\'re looking for.').toUpperCase(),
+                              textAlign: TextAlign.center,
+                              style: TextStyle(
+                                fontSize: 11,
+                                fontWeight: FontWeight.w700,
+                                color: scheme.onSurface.withValues(alpha: 0.85),
+                                height: 1.5,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    )
+                  : ListView.builder(
+                      controller: _scrollController,
+                      padding: const EdgeInsets.fromLTRB(AppSpacing.margin, 0, AppSpacing.margin, 110),
+                      itemCount: grouped.length,
+                      itemBuilder: (context, index) {
+                        final section = grouped.entries.elementAt(index);
+                        return Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Padding(
+                              padding: const EdgeInsets.fromLTRB(4, 12, 0, 12),
+                              child: Text(
+                                section.key.toUpperCase(),
+                                style: TextStyle(
+                                  fontSize: 11,
+                                  fontWeight: FontWeight.w900,
+                                  letterSpacing: 2.0,
+                                  color: scheme.primary,
+                                ),
+                              ),
+                            ),
+                            ...section.value.map((entry) {
+                              final meta = _metaFor(entry, scheme);
+                              final isSelected = _selectedIds.contains(entry.id);
+                              return Padding(
+                                padding: const EdgeInsets.only(bottom: 12),
+                                child: Stack(
+                                  children: [
+                                    Dismissible(
+                                      key: ValueKey(entry.id),
+                                      direction: DismissDirection.endToStart,
+                                      background: Container(
+                                        alignment: Alignment.centerRight,
+                                        padding: const EdgeInsets.only(right: 20),
+                                        decoration: BoxDecoration(
+                                          color: AppColors.red,
+                                          borderRadius: BorderRadius.circular(AppRadius.sm),
+                                          border: Border.all(color: scheme.outline, width: 2),
+                                        ),
+                                        child: Icon(Icons.delete_outline_rounded, color: scheme.onError),
+                                      ),
+                                      onDismissed: (_) {
+                                        ref.read(historyProvider.notifier).delete(entry.id);
+                                        HapticFeedback.heavyImpact();
+                                      },
+                                      child: ActivityTile(
+                                        icon: isSelected ? Icons.check_box_rounded : meta.icon,
+                                        iconColor: isSelected ? scheme.primary : meta.color,
+                                        title: meta.title,
+                                        subtitle: meta.subtitle,
+                                        trailingText: meta.trailingText,
+                                        statusLabel: entry.status == HistoryStatus.success ? 'SECURE' : 'FAILED',
+                                        statusTone: entry.status == HistoryStatus.success ? StatusTone.success : StatusTone.danger,
+                                        onTap: () {
+                                          if (_isSelectionMode) {
+                                            HapticFeedback.selectionClick();
+                                            setState(() {
+                                              if (isSelected) {
+                                                _selectedIds.remove(entry.id);
+                                                if (_selectedIds.isEmpty) _isSelectionMode = false;
+                                              } else {
+                                                _selectedIds.add(entry.id);
+                                              }
+                                            });
+                                          } else {
+                                            _showEntryDetails(context, entry, meta);
+                                          }
+                                        },
+                                        onLongPress: () {
+                                          HapticFeedback.mediumImpact();
+                                          setState(() {
+                                            _isSelectionMode = true;
+                                            _selectedIds.add(entry.id);
+                                          });
+                                        },
+                                      ),
+                                    ),
+                                    if (entry.status == HistoryStatus.failed)
+                                      const IgnorePointer(
+                                        child: Center(
+                                          child: ParticleBurst(color: AppColors.red),
+                                        ),
+                                      ),
+                                  ],
+                                ),
+                              );
+                            }),
+                          ],
+                        );
+                      },
+                    ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _EntryMeta {
+  final IconData icon;
+  final Color color;
+  final String title;
+  final String subtitle;
+  final String trailingText;
+  const _EntryMeta({required this.icon, required this.color, required this.title, required this.subtitle, required this.trailingText});
+}
+
+_EntryMeta _metaFor(HistoryEntry entry, ColorScheme scheme) {
+  switch (entry.toolId) {
+    case HistoryTool.lsbText:
+      return _EntryMeta(
+        icon: entry.operation == HistoryOperation.encoded ? Icons.image_search_rounded : Icons.visibility_rounded,
+        color: AppColors.green,
+        title: 'LSB ON TEXT · ${entry.imageName.toUpperCase()}',
+        subtitle: '${Formatters.timestamp(entry.timestamp)}  ·  PLAIN LSB',
+        trailingText: entry.operation == HistoryOperation.encoded ? 'HIDDEN' : 'REVEALED',
+      );
+    case HistoryTool.lsbDes:
+      return _EntryMeta(
+        icon: entry.operation == HistoryOperation.encoded ? Icons.enhanced_encryption_rounded : Icons.no_encryption_rounded,
+        color: AppColors.red,
+        title: 'LSB WITH DES · ${entry.imageName.toUpperCase()}',
+        subtitle: '${Formatters.timestamp(entry.timestamp)}  ·  DES-CBC',
+        trailingText: entry.operation == HistoryOperation.encoded ? 'ENCRYPTED' : 'DECRYPTED',
+      );
+    case HistoryTool.passwordGenerator:
+      return _EntryMeta(
+        icon: Icons.password_rounded,
+        color: AppColors.green,
+        title: 'PASSWORD GENERATED',
+        subtitle: '${Formatters.timestamp(entry.timestamp)}  ·  ${entry.imageName.toUpperCase()}',
+        trailingText: 'NOT STORED',
+      );
+    case HistoryTool.caesarEncrypt:
+    case HistoryTool.caesarDecrypt:
+      return _EntryMeta(
+        icon: Icons.abc_rounded,
+        color: scheme.primary,
+        title: entry.operation == HistoryOperation.encoded ? 'CAESAR ENCRYPTED' : 'CAESAR DECRYPTED',
+        subtitle: '${Formatters.timestamp(entry.timestamp)}  ·  ${entry.imageName.toUpperCase()}',
+        trailingText: 'CIPHER',
+      );
+    case HistoryTool.safetext:
+    default:
+      return _EntryMeta(
+        icon: entry.operation == HistoryOperation.encoded ? Icons.lock_rounded : Icons.lock_open_rounded,
+        color: entry.operation == HistoryOperation.encoded ? scheme.primary : AppColors.red,
+        title: entry.imageName.toUpperCase(),
+        subtitle: '${Formatters.timestamp(entry.timestamp)}  ·  ${(entry.cipherAlgorithm ?? entry.mode).toUpperCase()}',
+        trailingText: entry.operation == HistoryOperation.encoded ? 'ENCODED' : 'DECODED',
+      );
+  }
 }
 
 class _DetailRow extends StatelessWidget {
@@ -538,4 +830,3 @@ class _FilterChip extends StatelessWidget {
     );
   }
 }
-

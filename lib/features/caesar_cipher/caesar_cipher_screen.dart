@@ -491,12 +491,12 @@ class _TransformSection extends ConsumerWidget {
                 const SizedBox(width: AppSpacing.sm),
                 Text(
                   title,
-                  style: const TextStyle(
+                  style: TextStyle(
                     fontFamily: 'Inter',
                     fontSize: 12,
                     fontWeight: FontWeight.w900,
                     letterSpacing: 1.5,
-                    color: Colors.white,
+                    color: scheme.onSurface,
                   ),
                 ),
               ],
@@ -731,12 +731,13 @@ class _TypingTextState extends State<_TypingText> with SingleTickerProviderState
 class _SecurityNoticeCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
     return Container(
       padding: const EdgeInsets.all(AppSpacing.margin),
       decoration: BoxDecoration(
         color: AppColors.black,
         borderRadius: BorderRadius.circular(AppRadius.sm),
-        border: Border.all(color: Colors.white, width: 2),
+        border: Border.all(color: scheme.outline, width: 2),
       ),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,

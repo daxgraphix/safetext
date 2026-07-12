@@ -28,8 +28,7 @@ class HiveBoxes {
     );
     settingsBox = await Hive.openBox(
       AppConstants.settingsBoxName,
-      // We don't encrypt settings typically to allow the app to boot and 
-      // read non-sensitive configs, but we could if needed.
+      encryptionCipher: strategy,
     );
   }
 }

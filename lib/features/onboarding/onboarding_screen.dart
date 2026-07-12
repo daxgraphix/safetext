@@ -7,6 +7,7 @@ import '../../app/providers.dart';
 import '../../app/routes.dart';
 import '../../app/theme/app_colors.dart';
 import '../../app/theme/app_theme.dart';
+import '../../shared/widgets/pin_input_field.dart';
 
 class _OnboardPage {
   final IconData icon;
@@ -76,6 +77,15 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> with Ticker
         (Icons.history_edu_rounded, 'Audit Ready'),
       ],
     ),
+    _OnboardPage(
+      icon: Icons.security_rounded,
+      title: 'Setup Security PIN',
+      description: 'Create a local PIN to protect your history and vault. This never leaves your device.',
+      badges: [
+        (Icons.pin_rounded, 'App-Level PIN'),
+        (Icons.offline_bolt_rounded, 'Encrypted Storage'),
+      ],
+    ),
   ];
 
   @override
@@ -90,17 +100,30 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> with Ticker
     });
   }
 
+  final _pinController = TextEditingController();
+  String? _pinError;
+
   @override
   void dispose() {
     _controller.dispose();
     _pulseController.dispose();
     _shimmerController.dispose();
+    _pinController.dispose();
     super.dispose();
   }
 
   Future<void> _finish() async {
-    await ref.read(settingsRepositoryProvider).setOnboardingComplete(true);
-    if (mounted) context.go(AppRoutes.home);
+    if (ref.read(settingsProvider).isPasswordSet) {
+      await ref.read(settingsRepositoryProvider).setOnboardingComplete(true);
+      if (mounted) context.go(AppRoutes.home);
+    } else {
+      // If we're on the last page and PIN isn't set, show error or focus
+      if (_page == _pages.length - 1) {
+        setState(() => _pinError = 'PIN IS REQUIRED TO CONTINUE');
+      } else {
+        _controller.animateToPage(_pages.length - 1, duration: const Duration(milliseconds: 500), curve: Curves.easeOutQuart);
+      }
+    }
   }
 
   @override
@@ -130,6 +153,19 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> with Ticker
                     itemCount: _pages.length,
                     onPageChanged: (i) => setState(() => _page = i),
                     itemBuilder: (context, index) {
+                      if (index == _pages.length - 1) {
+                        return _PinSetupView(
+                          page: _pages[index],
+                          controller: _pinController,
+                          error: _pinError,
+                          onChanged: (v) {
+                            if (v.length >= 4) {
+                              ref.read(settingsProvider.notifier).setAppPassword(v);
+                              setState(() => _pinError = null);
+                            }
+                          },
+                        );
+                      }
                       return _OnboardPageView(
                         page: _pages[index],
                         index: index,
@@ -477,7 +513,7 @@ class _IllustrationPainter extends CustomPainter {
           );
         }
       }
-    } else { // Privacy
+    } else if (type == 3) { // Privacy
       final rect = Rect.fromCenter(center: center, width: 120, height: 120);
       canvas.drawRect(rect, paint);
       canvas.drawPath(
@@ -488,9 +524,81 @@ class _IllustrationPainter extends CustomPainter {
           ..lineTo(center.dx - 40, center.dy + 40),
         paint,
       );
+    } else { // PIN Setup
+      for (var i = 0; i < 4; i++) {
+        canvas.drawCircle(
+          center + Offset(-45.0 + (i * 30), 0),
+          10 + (animationValue * 2),
+          paint,
+        );
+      }
     }
   }
 
   @override
   bool shouldRepaint(covariant _IllustrationPainter oldDelegate) => true;
+}
+
+class _PinSetupView extends StatelessWidget {
+  final _OnboardPage page;
+  final TextEditingController controller;
+  final String? error;
+  final ValueChanged<String> onChanged;
+
+  const _PinSetupView({
+    required this.page,
+    required this.controller,
+    required this.error,
+    required this.onChanged,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 32),
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Container(
+            padding: const EdgeInsets.all(24),
+            decoration: BoxDecoration(
+              color: scheme.surface,
+              border: Border.all(color: scheme.outline, width: 2.0),
+              borderRadius: BorderRadius.circular(AppRadius.sm),
+            ),
+            child: Icon(page.icon, size: 64, color: scheme.primary),
+          ),
+          const SizedBox(height: 32),
+          Text(
+            page.title.toUpperCase(),
+            textAlign: TextAlign.center,
+            style: const TextStyle(
+              fontSize: 24,
+              fontWeight: FontWeight.w900,
+              letterSpacing: -0.5,
+            ),
+          ),
+          const SizedBox(height: 16),
+          Text(
+            page.description.toUpperCase(),
+            textAlign: TextAlign.center,
+            style: TextStyle(
+              color: scheme.onSurface.withValues(alpha: 0.7),
+              fontWeight: FontWeight.w700,
+              fontSize: 12,
+            ),
+          ),
+          const SizedBox(height: 40),
+          PinInputField(
+            controller: controller,
+            onChanged: onChanged,
+            errorText: error,
+            counterText: 'MINIMUM 4 DIGITS',
+          ),
+        ],
+      ),
+    );
+  }
 }

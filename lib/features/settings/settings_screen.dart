@@ -9,8 +9,10 @@ import '../../core/constants/app_constants.dart';
 import '../../core/services/storage_service.dart';
 import '../../core/utils/formatters.dart';
 import '../../shared/dialogs/confirm_dialog.dart';
+import '../../shared/dialogs/security_gate_dialog.dart';
 import '../../shared/widgets/app_buttons.dart';
 import '../../shared/widgets/grid_painter.dart';
+import '../../shared/widgets/pin_input_field.dart';
 import '../../shared/widgets/safetext_app_bar.dart';
 
 class SettingsScreen extends ConsumerStatefulWidget {
@@ -108,6 +110,13 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
               subtitle: 'WIPE OLD HISTORY ENTRIES AUTOMATICALLY',
               value: settings.historyExpiryEnabled,
               onChanged: notifier.toggleHistoryExpiry,
+            ),
+            Container(height: 2, color: scheme.outline),
+            _NavRow(
+              icon: Icons.password_rounded,
+              title: 'CHANGE APP PIN/PASSWORD',
+              subtitle: settings.isPasswordSet ? 'UPDATE INTERNAL CREDENTIALS' : 'SET INTERNAL CREDENTIALS',
+              onTap: () => _showChangePasswordDialog(context, notifier),
             ),
             if (settings.historyExpiryEnabled) ...[
               Container(height: 2, color: scheme.outline),
@@ -326,6 +335,131 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
     ),
   );
 }
+
+  void _showChangePasswordDialog(BuildContext context, SettingsNotifier notifier) async {
+    final settings = ref.read(settingsProvider);
+    final scheme = Theme.of(context).colorScheme;
+
+    if (settings.isPasswordSet) {
+      final authenticated = await SecurityGateDialog.show(context);
+      if (!authenticated) return;
+    }
+
+    if (!context.mounted) return;
+
+    final controller = TextEditingController();
+    final confirmController = TextEditingController();
+
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => StatefulBuilder(
+        builder: (context, setState) {
+          String? error;
+          if (controller.text.isNotEmpty && confirmController.text.isNotEmpty) {
+            if (controller.text != confirmController.text) {
+              error = 'PINS DO NOT MATCH';
+            } else if (controller.text.length < 4) {
+              error = 'MINIMUM 4 DIGITS';
+            }
+          }
+
+          return Dialog(
+            backgroundColor: Colors.transparent,
+            child: Container(
+              decoration: BoxDecoration(
+                color: scheme.surface,
+                borderRadius: BorderRadius.circular(AppRadius.sm),
+                border: Border.all(color: scheme.onSurface, width: 2),
+              ),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+                    decoration: BoxDecoration(
+                      border: Border(bottom: BorderSide(color: scheme.onSurface, width: 2)),
+                    ),
+                    child: Row(
+                      children: [
+                        Icon(Icons.password_rounded, color: scheme.primary, size: 20),
+                        const SizedBox(width: 12),
+                        Text(
+                          settings.isPasswordSet ? 'CHANGE APP PIN' : 'SET APP PIN',
+                          style: const TextStyle(
+                            fontFamily: 'Roboto Mono',
+                            fontWeight: FontWeight.w900,
+                            fontSize: 14,
+                            letterSpacing: 1.0,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(20, 20, 20, 24),
+                    child: Column(
+                      children: [
+                        PinInputField(
+                          controller: controller,
+                          labelText: 'NEW PIN',
+                          autofocus: true,
+                          onChanged: (_) => setState(() {}),
+                        ),
+                        const SizedBox(height: 16),
+                        PinInputField(
+                          controller: confirmController,
+                          labelText: 'CONFIRM NEW PIN',
+                          errorText: error,
+                          onChanged: (_) => setState(() {}),
+                        ),
+                      ],
+                    ),
+                  ),
+                  Container(
+                    padding: const EdgeInsets.all(16),
+                    decoration: BoxDecoration(
+                      color: scheme.onSurface.withValues(alpha: 0.02),
+                      border: Border(top: BorderSide(color: scheme.onSurface, width: 2)),
+                    ),
+                    child: Row(
+                      children: [
+                        Expanded(
+                          child: SecondaryButton(
+                            label: 'CANCEL',
+                            onPressed: () => Navigator.pop(context),
+                          ),
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: PrimaryButton(
+                            label: 'SAVE',
+                            onPressed: (controller.text.length >= 4 && controller.text == confirmController.text)
+                                ? () {
+                                    notifier.setAppPassword(controller.text);
+                                    Navigator.pop(context);
+                                    ScaffoldMessenger.of(context).showSnackBar(
+                                      const SnackBar(
+                                        content: Text('PIN UPDATED SUCCESSFULLY'),
+                                        behavior: SnackBarBehavior.floating,
+                                      ),
+                                    );
+                                  }
+                                : null,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          );
+        },
+      ),
+    );
+  }
 
   void _showPrivacyNotice(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;

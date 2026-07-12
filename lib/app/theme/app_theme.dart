@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'app_colors.dart';
+import 'security_colors.dart';
 
 class AppRadius {
   AppRadius._();
@@ -158,6 +159,9 @@ class AppTheme {
         labelStyle: const TextStyle(fontFamily: 'Roboto Mono', fontWeight: FontWeight.bold),
         hintStyle: TextStyle(color: scheme.onSurfaceVariant.withValues(alpha: 0.5), fontFamily: 'Roboto Mono'),
       ),
+      extensions: [
+        isDark ? SecurityColors.dark : SecurityColors.light,
+      ],
     );
   }
 }

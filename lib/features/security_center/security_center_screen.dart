@@ -2,9 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import 'package:share_plus/share_plus.dart';
-import 'package:path_provider/path_provider.dart';
-import 'dart:io';
 import 'dart:math' as math;
 
 import '../../app/providers.dart';
@@ -12,6 +9,7 @@ import '../../app/routes.dart';
 import '../../app/theme/app_theme.dart';
 import '../../app/theme/app_colors.dart';
 import '../../core/security/device_integrity_service.dart';
+import '../../core/services/export_service.dart';
 import '../../core/utils/formatters.dart';
 import '../../data/models/history_entry.dart';
 import '../../shared/widgets/status_chip.dart';
@@ -49,6 +47,7 @@ class _SecurityCenterScreenState extends ConsumerState<SecurityCenterScreen> {
   static const _tools = [
     (Icons.image_search_rounded, 'Steganography', AppRoutes.steganography),
     (Icons.password_rounded, 'Pass Gen', AppRoutes.passwordGenerator),
+    (Icons.qr_code_2_rounded, 'QR Vault', AppRoutes.qrVault),
     (Icons.abc_rounded, 'Caesar Cipher', AppRoutes.caesarCipher),
   ];
 
@@ -318,36 +317,107 @@ class _SecurityGauge extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final scheme = Theme.of(context).colorScheme;
-    final color = score > 0.8 ? AppColors.green : AppColors.red;
+    final color = score > 0.8 ? AppColors.green : (score > 0.4 ? Colors.orange : AppColors.red);
 
-    return Stack(
-      alignment: Alignment.center,
-      children: [
-        SizedBox(
-          width: 86,
-          height: 86,
-          child: TweenAnimationBuilder<double>(
-            tween: Tween<double>(begin: 0, end: score),
-            duration: const Duration(milliseconds: 1500),
-            curve: Curves.easeOutBack,
-            builder: (context, value, _) => CircularProgressIndicator(
-              value: value,
-              strokeWidth: 12,
-              backgroundColor: scheme.outline.withValues(alpha: 0.1),
-              valueColor: AlwaysStoppedAnimation(color),
-              strokeCap: StrokeCap.square,
-            ),
+    return TweenAnimationBuilder<double>(
+      tween: Tween<double>(begin: 0, end: score),
+      duration: const Duration(milliseconds: 2000),
+      curve: Curves.easeOutExpo,
+      builder: (context, value, _) {
+        return CustomPaint(
+          size: const Size(100, 100),
+          painter: _SecurityScorePainter(
+            score: value,
+            color: color,
+            textColor: Colors.white,
           ),
-        ),
-        Icon(
-          score > 0.8 ? Icons.verified_user_rounded : (score > 0.4 ? Icons.gpp_maybe_rounded : Icons.gpp_bad_rounded),
-          color: color,
-          size: 36,
-        ),
-      ],
+        );
+      },
     );
   }
+}
+
+class _SecurityScorePainter extends CustomPainter {
+  final double score;
+  final Color color;
+  final Color textColor;
+
+  _SecurityScorePainter({
+    required this.score,
+    required this.color,
+    required this.textColor,
+  });
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final center = Offset(size.width / 2, size.height / 2);
+    final radius = size.width / 2;
+    const strokeWidth = 10.0;
+
+    // Background track
+    final trackPaint = Paint()
+      ..color = Colors.white.withValues(alpha: 0.1)
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = strokeWidth;
+    canvas.drawCircle(center, radius - strokeWidth / 2, trackPaint);
+
+    // Score arc
+    final scorePaint = Paint()
+      ..color = color
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = strokeWidth
+      ..strokeCap = StrokeCap.square;
+    
+    canvas.drawArc(
+      Rect.fromCircle(center: center, radius: radius - strokeWidth / 2),
+      -math.pi / 2,
+      2 * math.pi * score,
+      false,
+      scorePaint,
+    );
+
+    // Percentage text
+    final textPainter = TextPainter(
+      text: TextSpan(
+        text: '${(score * 100).toInt()}',
+        style: TextStyle(
+          color: textColor,
+          fontSize: 28,
+          fontWeight: FontWeight.w900,
+          fontFamily: 'Roboto Mono',
+        ),
+      ),
+      textDirection: TextDirection.ltr,
+    )..layout();
+
+    textPainter.paint(
+      canvas,
+      center - Offset(textPainter.width / 2, textPainter.height / 2 + 5),
+    );
+
+    final labelPainter = TextPainter(
+      text: TextSpan(
+        text: 'SCORE',
+        style: TextStyle(
+          color: textColor.withValues(alpha: 0.7),
+          fontSize: 8,
+          fontWeight: FontWeight.w900,
+          fontFamily: 'Roboto Mono',
+          letterSpacing: 1.0,
+        ),
+      ),
+      textDirection: TextDirection.ltr,
+    )..layout();
+
+    labelPainter.paint(
+      canvas,
+      center - Offset(labelPainter.width / 2, -15),
+    );
+  }
+
+  @override
+  bool shouldRepaint(covariant _SecurityScorePainter oldDelegate) =>
+      oldDelegate.score != score || oldDelegate.color != color;
 }
 
 class _ExpandableProtocolCard extends StatefulWidget {
@@ -720,7 +790,7 @@ class _AuditLogList extends ConsumerWidget {
             Padding(
               padding: const EdgeInsets.all(16),
               child: Text(
-                'SHOWING LAST 8 EVENTS. FULL AUDIT REPORT AVAILABLE VIA SYSTEM ADMINISTRATOR.',
+                'SHOWING LAST 8 EVENTS. FULL AUDIT REPORT AVAILABLE VIA EXPORT.',
                 textAlign: TextAlign.center,
                 style: TextStyle(
                   fontSize: 9,
@@ -747,40 +817,123 @@ class _AuditLogList extends ConsumerWidget {
   Future<void> _exportAudit(BuildContext context, WidgetRef ref, List<HistoryEntry> history) async {
     HapticFeedback.mediumImpact();
     final integrity = await ref.read(integrityProvider.future);
-    
-    final StringBuffer report = StringBuffer();
-    report.writeln('========================================');
-    report.writeln('      SAFETEXT SECURITY AUDIT REPORT    ');
-    report.writeln('      GENERATED: ${DateTime.now()}      ');
-    report.writeln('========================================\n');
-    
-    report.writeln('[DEVICE INTEGRITY]');
-    report.writeln('ROOTED: ${integrity.isRooted ? "YES (CRITICAL)" : "NO"}');
-    report.writeln('REAL DEVICE: ${integrity.isRealDevice ? "YES" : "NO (EMULATOR)"}');
-    report.writeln('DEV MODE: ${integrity.isDevMode ? "ENABLED" : "DISABLED"}');
-    report.writeln('SAFE DEVICE: ${integrity.isSafe ? "YES" : "NO"}\n');
-    
-    report.writeln('[AUDIT LOGS]');
-    for (final entry in history) {
-      report.writeln('${Formatters.timestamp(entry.timestamp)} | ${entry.operation.name.toUpperCase()} | ${entry.toolId} | ${entry.status.name.toUpperCase()}');
-    }
-    
-    try {
-      final tempDir = await getTemporaryDirectory();
-      final file = File('${tempDir.path}/safetext_audit_${DateTime.now().millisecondsSinceEpoch}.txt');
-      await file.writeAsString(report.toString());
-      
-      await Share.shareXFiles(
-        [XFile(file.path)],
-        subject: 'SafeText Security Audit Report',
-      );
-    } catch (e) {
-      if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('FAILED TO GENERATE REPORT')),
-        );
-      }
-    }
+    final exportService = ref.read(exportServiceProvider);
+
+    if (!context.mounted) return;
+
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.transparent,
+      builder: (context) => Container(
+        decoration: BoxDecoration(
+          color: Theme.of(context).colorScheme.surface,
+          border: Border(top: BorderSide(color: Theme.of(context).colorScheme.onSurface, width: 2)),
+        ),
+        padding: const EdgeInsets.all(24),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text(
+              'EXPORT FORMAT',
+              style: TextStyle(fontSize: 18, fontWeight: FontWeight.w900, letterSpacing: 1.0),
+            ),
+            const SizedBox(height: 20),
+            Row(
+              children: [
+                Expanded(
+                  child: SecondaryButton(
+                    label: 'TEXT FILE',
+                    icon: Icons.description_rounded,
+                    onPressed: () {
+                      Navigator.pop(context);
+                      exportService.shareTextReport(history: history, integrity: integrity);
+                    },
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: SecondaryButton(
+                    label: 'PDF REPORT',
+                    icon: Icons.picture_as_pdf_rounded,
+                    onPressed: () {
+                      Navigator.pop(context);
+                      _showPdfPasswordDialog(context, ref, history, integrity);
+                    },
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 12),
+            PrimaryButton(
+              label: 'PRINT REPORT',
+              icon: Icons.print_rounded,
+              onPressed: () {
+                Navigator.pop(context);
+                exportService.printReport(history: history, integrity: integrity);
+              },
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  void _showPdfPasswordDialog(BuildContext context, WidgetRef ref, List<HistoryEntry> history, DeviceIntegrityResult integrity) {
+    final passwordController = TextEditingController();
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (context) => Padding(
+        padding: EdgeInsets.only(bottom: MediaQuery.of(context).viewInsets.bottom),
+        child: Container(
+          decoration: BoxDecoration(
+            color: Theme.of(context).colorScheme.surface,
+            border: Border(top: BorderSide(color: Theme.of(context).colorScheme.onSurface, width: 2)),
+          ),
+          padding: const EdgeInsets.all(24),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Text(
+                'ENCRYPT PDF REPORT?',
+                style: TextStyle(fontSize: 18, fontWeight: FontWeight.w900, letterSpacing: 1.0),
+              ),
+              const SizedBox(height: 8),
+              const Text(
+                'OPTIONAL: ADD A PASSWORD TO THE PDF FILE.',
+                style: TextStyle(fontFamily: 'Roboto Mono', fontSize: 11, color: Colors.grey),
+              ),
+              const SizedBox(height: 20),
+              TextField(
+                controller: passwordController,
+                obscureText: true,
+                style: const TextStyle(fontFamily: 'Roboto Mono', fontWeight: FontWeight.bold),
+                decoration: const InputDecoration(
+                  labelText: 'PDF PASSWORD (OPTIONAL)',
+                  hintText: 'LEAVE BLANK FOR NO PASSWORD',
+                ),
+              ),
+              const SizedBox(height: 24),
+              PrimaryButton(
+                label: 'GENERATE PDF',
+                onPressed: () {
+                  final password = passwordController.text;
+                  Navigator.pop(context);
+                  ref.read(exportServiceProvider).sharePdfReport(
+                    history: history,
+                    integrity: integrity,
+                    password: password.isEmpty ? null : password,
+                  );
+                },
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
   }
 }
 
