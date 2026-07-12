@@ -3,8 +3,8 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 
 class ShareIntentService {
-  static const _methodChannel = MethodChannel('com.safetext.app/share_intent');
-  static const _eventChannel = EventChannel('com.safetext.app/share_events');
+  static const _methodChannel = MethodChannel('co.cyberswahili.safetext/share_intent');
+  static const _eventChannel = EventChannel('co.cyberswahili.safetext/share_events');
   
   static final ShareIntentService _instance = ShareIntentService._internal();
   factory ShareIntentService() => _instance;

@@ -11,7 +11,7 @@ import 'package:flutter/services.dart';
 class SecurityChannelService {
   const SecurityChannelService();
 
-  static const MethodChannel _channel = MethodChannel('com.safetext.app/security');
+  static const MethodChannel _channel = MethodChannel('co.cyberswahili.safetext/security');
 
   Future<void> setSecureFlag(bool enabled) async {
     try {

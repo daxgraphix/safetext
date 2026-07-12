@@ -16,7 +16,7 @@ def flutterVersionCode = localProperties.getProperty("flutter.versionCode") ?: "
 def flutterVersionName = localProperties.getProperty("flutter.versionName") ?: "1.0.0"
 
 android {
-    namespace "com.safetext.app"
+    namespace "co.cyberswahili.safetext"
     compileSdk 36
     ndkVersion flutter.ndkVersion
 
@@ -35,7 +35,7 @@ android {
 
     defaultConfig {
         // SafeText's on-device, offline-only application id.
-        applicationId "com.safetext.app"
+        applicationId "co.cyberswahili.safetext"
         minSdkVersion flutter.minSdkVersion
         targetSdk 35
         versionCode flutterVersionCode.toInteger()

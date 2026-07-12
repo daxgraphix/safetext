@@ -1,4 +1,4 @@
-package com.safetext.app
+package co.cyberswahili.safetext
 
 import android.content.Intent
 import android.net.Uri
@@ -16,9 +16,9 @@ import java.util.UUID
  * SafeText's single native entry point.
  */
 class MainActivity : FlutterActivity() {
-    private val securityChannel = "com.safetext.app/security"
-    private val shareChannel = "com.safetext.app/share_intent"
-    private val shareEventChannel = "com.safetext.app/share_events"
+    private val securityChannel = "co.cyberswahili.safetext/security"
+    private val shareChannel = "co.cyberswahili.safetext/share_intent"
+    private val shareEventChannel = "co.cyberswahili.safetext/share_events"
     private var sharedFiles: List<String>? = null
     private var eventSink: io.flutter.plugin.common.EventChannel.EventSink? = null
 
