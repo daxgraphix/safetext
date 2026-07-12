@@ -44,6 +44,8 @@ class AppRoutes {
   static const qrVault = '/qr-vault';
 }
 
+final rootNavigatorKey = GlobalKey<NavigatorState>();
+
 /// A helper to create consistent slide+fade transitions for full-screen flows.
 CustomTransitionPage _buildPageWithTransition<T>({
   required BuildContext context,
@@ -76,6 +78,7 @@ final routerProvider = Provider<GoRouter>((ref) {
   final settingsRepo = ref.watch(settingsRepositoryProvider);
 
   return GoRouter(
+    navigatorKey: rootNavigatorKey,
     initialLocation: AppRoutes.splash,
     routes: [
       GoRoute(

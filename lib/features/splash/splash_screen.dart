@@ -76,22 +76,20 @@ class _SplashScreenState extends ConsumerState<SplashScreen> with TickerProvider
 
     // Require authentication on app open if password is set
     if (settings.isPasswordSet) {
+      // Mark as locked initially so if they somehow bypass splash they still hit the gate
+      ref.read(lockStateProvider.notifier).state = true;
+      
       final authenticated = await SecurityGateDialog.show(
         context,
         title: 'APP LOCKED',
         message: 'PLEASE AUTHENTICATE TO UNLOCK YOUR SECURE VAULT.',
       );
       if (!authenticated) {
-        // If they cancel or fail, we can't let them in.
-        // We could exit the app or just stay on splash.
-        // For UX, let's keep them on splash with a button to retry if needed,
-        // but SecurityGateDialog is non-dismissible and has its own UI.
-        // If show returns false, it means they cancelled.
-        // On splash, we probably shouldn't allow cancel to just stay there.
-        // Let's re-trigger or handle exit.
         SystemNavigator.pop();
         return;
       }
+      // Successfully authenticated at startup
+      ref.read(lockStateProvider.notifier).state = false;
     }
 
     if (mounted) {

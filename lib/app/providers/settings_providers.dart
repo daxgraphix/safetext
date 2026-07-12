@@ -77,6 +77,8 @@ class SettingsNotifier extends StateNotifier<SecuritySettings> {
   Future<void> clearAppPassword() => _update((s) => s.copyWith(appPassword: null, isPasswordSet: false));
 }
 
+final lockStateProvider = StateProvider<bool>((ref) => false);
+
 final settingsProvider = StateNotifierProvider<SettingsNotifier, SecuritySettings>((ref) {
   return SettingsNotifier(
     ref.watch(settingsRepositoryProvider),

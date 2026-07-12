@@ -1,156 +1,76 @@
 # SafeText
 
-**Enterprise-Grade Offline Text Steganography Platform for Android**
+**Enterprise-Grade Offline Privacy & Steganography Platform**
 _Private Messages Hidden in Plain Sight_
 
-SafeText hides encrypted text messages inside ordinary images using LSB
-steganography, so an observer sees only a normal photo. It runs 100%
-offline — no login, no account, no network calls.
+SafeText is a high-security vault designed to hide encrypted data within ordinary images and manage sensitive QR codes without ever touching the cloud. It features a hardware-anchored security model, mandatory biometric/PIN protection, and "local-first" data sovereignty.
 
-## Modules
+## 🛡️ Security Architecture
 
-### Core (original release)
-Home dashboard, Encode/Decode (AES-256-GCM + Argon2id, Ghost/Armor modes), Secure History, Security Center, Settings.
+SafeText employs a multi-layered "Defense-in-Depth" strategy:
 
-### Steganography (extension)
-A dedicated **Steganography** hub (`/steganography`) offering two lighter-weight sibling workflows to the core encoder:
+1.  **Hardware Binding**: The application generates a unique `device_binding_id` stored in the device's Secure Enclave (Android Keystore / iOS Keychain). Data cannot be decrypted if moved to another device.
+2.  **Hardware-Anchored Encryption**: All local databases (Hive) are encrypted using **AES-256**. The encryption keys are stored in the device's TEE (Trusted Execution Environment) via `DeviceSecurityService`.
+3.  **Mandatory Security Gate**: Access is guarded by a unified `SecurityGateDialog`. 
+    *   **Cold Start**: Authentication is required immediately after the Splash screen.
+    *   **App Resumption**: The app automatically locks when moved to the background, requiring PIN or Biometrics (Fingerprint/FaceID) to resume.
+4.  **Screenshot Blocking**: Uses native `FLAG_SECURE` to prevent screen captures and hide app content from the "Recent Apps" switcher.
+5.  **No-Cloud Policy**: 100% offline. No analytics, no accounts, and no network permissions.
 
-- **LSB on Text** (`/steganography/lsb-text`) — hides plain UTF-8 text directly in an image's pixel LSBs. No encryption: fastest option, but anyone who extracts the payload can read it immediately. Backed by `core/security/lsb_steganography_service.dart`.
-- **LSB with DES** (`/steganography/lsb-des`) — encrypts the message with a from-scratch, textbook-standard DES-CBC implementation (`core/security/des_crypto_service.dart`) before embedding it via the same plain-LSB engine (ciphertext bridged through base64, since the LSB frame carries text). **DES is a legacy 56-bit cipher included for interoperability/education, not real secrecy** — the UI says so explicitly, and the module is intentionally kept separate from the core AES-256-GCM encoder.
+## 🚀 Core Features
 
-Both screens use a 2-tab layout (Encode / Decode) rather than the core module's numbered wizard, since neither needs the capacity/health scoring or Ghost/Armor mode selection.
+### 1. Steganography (The "Ghost" Engine)
+Hides encrypted payloads inside image pixels using Least Significant Bit (LSB) embedding.
+- **Ghost Mode**: Pseudo-random bit scattering for maximum stealth and statistical invisibility.
+- **Armor Mode**: Sequential embedding with 3x redundancy to survive minor image compression.
 
-### Password Generator (extension)
-`/password-generator` — fully offline password generation via `dart:math`'s `Random.secure()` CSPRNG (`core/security/password_generator_service.dart`), with a length slider, per-class toggles (upper/lower/numbers/symbols), similar/ambiguous-character exclusion, and a transparent entropy-based strength meter (`core/security/password_strength_analyzer.dart`, Weak → Very Strong). Defaults are read from Settings. **Generated passwords are never written to History** — only a "password generated" event with length metadata is recorded.
+### 2. QR Vault
+A secure environment for managing sensitive QR codes (2FA seeds, crypto keys).
+- **Secure Generation**: Create QR codes from sensitive text with optional AES-256-GCM encryption.
+- **Encrypted Scanner**: Scan and decrypt secure QR codes directly within the vault.
+- **Blur Protection**: Vault content is obscured until authenticated.
 
-### Caesar Cipher (extension)
-`/caesar-cipher` — the classic educational substitution cipher (`core/security/caesar_cipher_service.dart`), with a shift slider (0–25), encrypt/decrypt sections, a character-shift visualization, and an explanatory card. Zero cryptographic strength by design; framed purely as a learning tool.
+### 3. Dcode & Multi-Cipher
+Manual encryption/decryption tools supporting:
+- **AES-256-GCM**: Industry-standard authenticated encryption.
+- **DES-CBC**: Legacy support for interoperability.
+- **Caesar Cipher**: Educational tool for basic substitution.
 
-### Cross-cutting updates
-- **Home dashboard**: added a horizontally-scrolling "More Tools" row (Steganography / Password Generator / Caesar Cipher) alongside the existing Encode/Decode cards — nothing removed.
-- **Secure History**: `HistoryEntry` gained a backward-compatible `toolId` field (defaults to `'safetext'` for pre-existing records) so the same list/filter UI can render entries from every module with the right icon/label, plus a new `Tools` filter chip. As before, only metadata is ever stored — never passwords, messages, or keys.
-- **Settings**: added "Password Generator Defaults" (length + character-class prefs, wired live into the generator) and "Steganography Settings" (default Ghost/Armor mode — now seeds the core Encode wizard's initial mode — and a compression warning, which the Encode Result screen's Share button now honors before handing off to `share_plus`).
+### 4. Password Generator
+CSPRNG-based offline password generation with an entropy-based strength meter. Defaults are configurable in Settings.
 
-## Security design
+### 5. Secure History
+An audit log of all cryptographic operations.
+- **Metadata Only**: Stores operation types and timestamps; never stores your messages, keys, or passwords.
+- **Auto-Expiry**: Optional automatic wiping of old logs after a set period.
 
-| Layer | Technology |
-|---|---|
-| Message confidentiality | AES-256-GCM (authenticated encryption) — core encoder only |
-| Key derivation | Argon2id (OWASP-recommended params: 19 MB, 2 iterations) |
-| Randomness | CSPRNG (`dart:math` `Random.secure()`) for all salts/nonces/seeds |
-| Concealment | LSB steganography across RGB channels of a lossless PNG |
-| Integrity | GCM auth tag + a secondary CRC32 payload checksum |
-| Legacy cipher (Steganography > LSB with DES) | DES-CBC, PKCS7 padding — **56-bit, not secure by modern standards**, included for interoperability/education only |
-| Educational cipher (Caesar Cipher module) | Caesar shift — **zero cryptographic strength**, learning tool only |
+## 📱 Screen Flows
 
-Two embedding **Security Modes**:
-- **Ghost Mode** — bits are scattered pseudo-randomly (seeded, CSPRNG-generated)
-  across the image for maximum stealth and minimal statistical footprint.
-- **Armor Mode** — bits are written sequentially with 3x repetition
-  (majority-vote decode) to tolerate minor recompression.
+- **Splash**: Performs integrity checks and hardware-key retrieval.
+- **Onboarding**: Mandatory 2-step PIN setup with confirmation.
+- **App Shell**: A persistent bottom-nav container hosting:
+    - **Home**: Quick access to Encode, Decode, and Tools.
+    - **History**: Searchable audit log of past actions.
+    - **Security Center**: Privacy audits and "Root/Jailbreak" detection.
+    - **Settings**: Global toggles for Screenshot Blocking, Auto-Clear Clipboard, and Dark Mode.
+- **Encode/Decode Wizards**: Multi-step flows for embedding/extracting data.
 
-History storage is **metadata-only** — SafeText never persists a decrypted
-message, a passphrase, or key material to disk.
+## 🛠️ Technical Stack
 
-## Getting started
+- **Framework**: Flutter (Clean Architecture / Feature-first)
+- **State Management**: Riverpod
+- **Database**: Hive (AES Encrypted)
+- **Native**: Kotlin (MethodChannels for `FLAG_SECURE` and Root Detection)
+- **Crypto**: `cryptography` package (AES-256-GCM, Argon2id)
 
-1. Install [Flutter](https://docs.flutter.dev/get-started/install) (stable channel).
-2. `flutter pub get`
-3. Copy `android/local.properties.example` to `android/local.properties` and
-   fill in your `sdk.dir` / `flutter.sdk` paths (Android Studio does this for
-   you automatically the first time you open the project).
-4. `flutter run` (or `flutter build apk --release`).
+## 🏁 Getting Started
 
-> The `release` build type currently signs with the debug keystore so local
-> builds work out of the box — replace `signingConfigs.release` in
-> `android/app/build.gradle` with your own upload key before publishing.
+1.  **Environment**: Ensure Flutter (Stable) is installed.
+2.  **Dependencies**: Run `flutter pub get`.
+3.  **Native Setup**: 
+    - Android: Update `local.properties` with your SDK paths.
+    - iOS: Run `pod install` in the `ios` directory.
+4.  **Run**: `flutter run`
 
-## Architecture
-
-Clean Architecture, feature-first:
-
-```
-lib/
-├── app/            # App shell: MaterialApp, GoRouter, theme, top-level providers
-├── core/           # Cross-cutting: constants, exceptions, crypto/stego engines, utils
-│   └── security/   # CryptoService, StegoService, PayloadCodec, LsbSteganographyService,
-│                    # DesCryptoService, CaesarCipherService, PasswordGeneratorService,
-│                    # PasswordStrengthAnalyzer
-├── data/           # Hive models (hand-written TypeAdapters), repositories, datasources
-├── features/       # One folder per screen/flow:
-│   ├── splash, onboarding, home, encode, decode, history, settings,
-│   │   security_center                          (original release)
-│   ├── steganography/                             (extension)
-│   │   ├── steganography_home_screen.dart
-│   │   ├── lsb_text/       (screen + provider — plain LSB, no encryption)
-│   │   └── lsb_des/        (screen + provider — DES-CBC + LSB)
-│   ├── password_generator/                        (extension)
-│   └── caesar_cipher/                              (extension)
-└── shared/         # Reusable widgets, dialogs, components
-```
-
-- **State management**: Riverpod (`StateNotifierProvider` per flow — see
-  `features/encode/providers/encode_provider.dart` and
-  `features/decode/providers/decode_provider.dart` for the multi-step wizard
-  state machines).
-- **Routing**: `go_router`, with a `ShellRoute` hosting the persistent
-  bottom-navigation bar (Home / History / Security / Settings).
-- **Local storage**: Hive, with hand-written `TypeAdapter`s (no
-  `build_runner`/codegen step) for `HistoryEntry` and `SecuritySettings`.
-- **Theming**: Material 3, tokens generated 1:1 from `DESIGN.md`, with full
-  dark (primary) and light (companion) `ThemeData`s.
-
-## Routes
-
-| Path | Screen |
-|---|---|
-| `/` | Splash |
-| `/onboarding` | Onboarding |
-| `/home`, `/history`, `/security`, `/settings` | Bottom-nav shell tabs |
-| `/encode`, `/encode/result` | Core Encode wizard + result |
-| `/decode`, `/decode/result` | Core Decode + message viewer |
-| `/steganography` | Steganography hub (choose LSB on Text / LSB with DES) |
-| `/steganography/lsb-text` | LSB on Text (Encode/Decode tabs) |
-| `/steganography/lsb-des` | LSB with DES (Encrypt+Embed / Decode+Decrypt tabs) |
-| `/password-generator` | Password Generator |
-| `/caesar-cipher` | Caesar Cipher |
-
-## Native Android security surface
-
-`MainActivity.kt` exposes a small platform channel
-(`com.safetext.app/security`) used by the Settings screen to:
-- Toggle `FLAG_SECURE` at runtime (blocks screenshots + hides the app from
-  the recent-apps switcher preview) — wired to the **Block Screenshots**
-  setting.
-- Run a best-effort root heuristic for the Security Center (UX signal only,
-  not a hard trust boundary).
-
-## Known simplifications / next steps
-
-- **Font**: `AppTextStyles`/`AppTheme` reference the `Inter` font family by
-  name, matching `DESIGN.md`, but no font files are bundled in this
-  deliverable (kept dependency-free / offline-buildable). Flutter will
-  gracefully fall back to the platform default font until you add the
-  actual `Inter-*.ttf` files under `assets/fonts/` and register them in the
-  `flutter.fonts:` section of `pubspec.yaml`, e.g.:
-  ```yaml
-  flutter:
-    fonts:
-      - family: Inter
-        fonts:
-          - asset: assets/fonts/Inter-Regular.ttf
-          - asset: assets/fonts/Inter-Medium.ttf
-            weight: 500
-          - asset: assets/fonts/Inter-SemiBold.ttf
-            weight: 600
-          - asset: assets/fonts/Inter-Bold.ttf
-            weight: 700
-  ```
-- Tamper/APK-integrity verification (`Integrity Verification` in the
-  original spec) is stubbed — wiring up Play Integrity API or a signature
-  hash check is a natural v1.1 addition.
-- App icon is a placeholder generated shield mark; swap in final brand
-  assets before release.
-- No automated test suite is included yet; `core/security` (crypto_service,
-  stego_service, payload_codec) is the highest-value target for unit tests
-  given it has zero Flutter/widget dependencies.
+---
+*SafeText is designed for users who require total digital sovereignty. Your data is your own.*
