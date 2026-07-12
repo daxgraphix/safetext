@@ -1,3 +1,6 @@
+import 'package:device_info_plus/device_info_plus.dart';
+import 'package:package_info_plus/package_info_plus.dart';
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -9,10 +12,8 @@ import '../../core/constants/app_constants.dart';
 import '../../core/services/storage_service.dart';
 import '../../core/utils/formatters.dart';
 import '../../shared/dialogs/confirm_dialog.dart';
-import '../../shared/dialogs/security_gate_dialog.dart';
 import '../../shared/widgets/app_buttons.dart';
 import '../../shared/widgets/grid_painter.dart';
-import '../../shared/widgets/pin_input_field.dart';
 import '../../shared/widgets/safetext_app_bar.dart';
 
 class SettingsScreen extends ConsumerStatefulWidget {
@@ -24,12 +25,15 @@ class SettingsScreen extends ConsumerStatefulWidget {
 
 class _SettingsScreenState extends ConsumerState<SettingsScreen> {
   int? _cacheBytes;
+  String _appVersion = '1.0.0';
+  String _deviceModel = 'UNKNOWN';
   final ScrollController _scrollController = ScrollController();
 
   @override
   void initState() {
     super.initState();
     _loadCacheSize();
+    _loadSystemInfo();
   }
 
   @override
@@ -41,6 +45,27 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
   Future<void> _loadCacheSize() async {
     final size = await const StorageService().cacheSizeBytes();
     if (mounted) setState(() => _cacheBytes = size);
+  }
+
+  Future<void> _loadSystemInfo() async {
+    final packageInfo = await PackageInfo.fromPlatform();
+    final deviceInfo = DeviceInfoPlugin();
+    String model = 'UNKNOWN';
+
+    if (Platform.isAndroid) {
+      final androidInfo = await deviceInfo.androidInfo;
+      model = '${androidInfo.manufacturer} ${androidInfo.model}'.toUpperCase();
+    } else if (Platform.isIOS) {
+      final iosInfo = await deviceInfo.iosInfo;
+      model = iosInfo.utsname.machine.toUpperCase();
+    }
+
+    if (mounted) {
+      setState(() {
+        _appVersion = packageInfo.version;
+        _deviceModel = model;
+      });
+    }
   }
 
   @override
@@ -110,13 +135,6 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
               subtitle: 'WIPE OLD HISTORY ENTRIES AUTOMATICALLY',
               value: settings.historyExpiryEnabled,
               onChanged: notifier.toggleHistoryExpiry,
-            ),
-            Container(height: 2, color: scheme.outline),
-            _NavRow(
-              icon: Icons.password_rounded,
-              title: 'CHANGE APP PIN/PASSWORD',
-              subtitle: settings.isPasswordSet ? 'UPDATE INTERNAL CREDENTIALS' : 'SET INTERNAL CREDENTIALS',
-              onTap: () => _showChangePasswordDialog(context, notifier),
             ),
             if (settings.historyExpiryEnabled) ...[
               Container(height: 2, color: scheme.outline),
@@ -305,6 +323,18 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
           const SizedBox(height: 32),
           const _SectionLabel('ABOUT SAFETEXT'),
           _SettingsCard(children: [
+            _InfoRow(
+              icon: Icons.smartphone_rounded,
+              title: 'DEVICE MODEL',
+              value: _deviceModel,
+            ),
+            Container(height: 2, color: scheme.outline),
+            _InfoRow(
+              icon: Icons.info_outline_rounded,
+              title: 'VERSION',
+              value: 'V$_appVersion',
+            ),
+            Container(height: 2, color: scheme.outline),
             _NavRow(
               icon: Icons.shield_outlined,
               title: 'PRIVACY POLICY',
@@ -335,131 +365,6 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
     ),
   );
 }
-
-  void _showChangePasswordDialog(BuildContext context, SettingsNotifier notifier) async {
-    final settings = ref.read(settingsProvider);
-    final scheme = Theme.of(context).colorScheme;
-
-    if (settings.isPasswordSet) {
-      final authenticated = await SecurityGateDialog.show(context);
-      if (!authenticated) return;
-    }
-
-    if (!context.mounted) return;
-
-    final controller = TextEditingController();
-    final confirmController = TextEditingController();
-
-    showDialog(
-      context: context,
-      barrierDismissible: false,
-      builder: (context) => StatefulBuilder(
-        builder: (context, setState) {
-          String? error;
-          if (controller.text.isNotEmpty && confirmController.text.isNotEmpty) {
-            if (controller.text != confirmController.text) {
-              error = 'PINS DO NOT MATCH';
-            } else if (controller.text.length < 4) {
-              error = 'MINIMUM 4 DIGITS';
-            }
-          }
-
-          return Dialog(
-            backgroundColor: Colors.transparent,
-            child: Container(
-              decoration: BoxDecoration(
-                color: scheme.surface,
-                borderRadius: BorderRadius.circular(AppRadius.sm),
-                border: Border.all(color: scheme.onSurface, width: 2),
-              ),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
-                    decoration: BoxDecoration(
-                      border: Border(bottom: BorderSide(color: scheme.onSurface, width: 2)),
-                    ),
-                    child: Row(
-                      children: [
-                        Icon(Icons.password_rounded, color: scheme.primary, size: 20),
-                        const SizedBox(width: 12),
-                        Text(
-                          settings.isPasswordSet ? 'CHANGE APP PIN' : 'SET APP PIN',
-                          style: const TextStyle(
-                            fontFamily: 'Roboto Mono',
-                            fontWeight: FontWeight.w900,
-                            fontSize: 14,
-                            letterSpacing: 1.0,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                  Padding(
-                    padding: const EdgeInsets.fromLTRB(20, 20, 20, 24),
-                    child: Column(
-                      children: [
-                        PinInputField(
-                          controller: controller,
-                          labelText: 'NEW PIN',
-                          autofocus: true,
-                          onChanged: (_) => setState(() {}),
-                        ),
-                        const SizedBox(height: 16),
-                        PinInputField(
-                          controller: confirmController,
-                          labelText: 'CONFIRM NEW PIN',
-                          errorText: error,
-                          onChanged: (_) => setState(() {}),
-                        ),
-                      ],
-                    ),
-                  ),
-                  Container(
-                    padding: const EdgeInsets.all(16),
-                    decoration: BoxDecoration(
-                      color: scheme.onSurface.withValues(alpha: 0.02),
-                      border: Border(top: BorderSide(color: scheme.onSurface, width: 2)),
-                    ),
-                    child: Row(
-                      children: [
-                        Expanded(
-                          child: SecondaryButton(
-                            label: 'CANCEL',
-                            onPressed: () => Navigator.pop(context),
-                          ),
-                        ),
-                        const SizedBox(width: 12),
-                        Expanded(
-                          child: PrimaryButton(
-                            label: 'SAVE',
-                            onPressed: (controller.text.length >= 4 && controller.text == confirmController.text)
-                                ? () {
-                                    notifier.setAppPassword(controller.text);
-                                    Navigator.pop(context);
-                                    ScaffoldMessenger.of(context).showSnackBar(
-                                      const SnackBar(
-                                        content: Text('PIN UPDATED SUCCESSFULLY'),
-                                        behavior: SnackBarBehavior.floating,
-                                      ),
-                                    );
-                                  }
-                                : null,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          );
-        },
-      ),
-    );
-  }
 
   void _showPrivacyNotice(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
@@ -779,6 +684,43 @@ class _SwitchRow extends StatelessWidget {
             ],
           ),
         ),
+      ),
+    );
+  }
+}
+
+class _InfoRow extends StatelessWidget {
+  final IconData icon;
+  final String title;
+  final String value;
+
+  const _InfoRow({required this.icon, required this.title, required this.value});
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    return Padding(
+      padding: const EdgeInsets.all(16),
+      child: Row(
+        children: [
+          Icon(icon, color: scheme.onSurface, size: 22),
+          const SizedBox(width: 14),
+          Expanded(
+            child: Text(
+              title,
+              style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w900),
+            ),
+          ),
+          Text(
+            value,
+            style: const TextStyle(
+              fontFamily: 'Roboto Mono',
+              fontSize: 12,
+              fontWeight: FontWeight.w900,
+              color: AppColors.green,
+            ),
+          ),
+        ],
       ),
     );
   }

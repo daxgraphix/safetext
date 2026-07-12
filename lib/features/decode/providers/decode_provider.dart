@@ -110,7 +110,6 @@ class DecodeNotifier extends StateNotifier<DecodeState> {
     }
     state = state.copyWith(stage: DecodeStage.decrypting, clearError: true);
     final crypto = ref.read(cryptoServiceProvider);
-    final settings = ref.read(settingsProvider);
     try {
       final message = await crypto.decrypt(
         salt: _extractedPayload.salt,
@@ -138,10 +137,6 @@ class DecodeNotifier extends StateNotifier<DecodeState> {
       final newAttempts = state.failedAttempts + 1;
       state = state.copyWith(stage: DecodeStage.error, errorMessage: e.message, failedAttempts: newAttempts);
       
-      if (settings.panicWipeEnabled && newAttempts >= settings.maxFailedAttempts) {
-        await _performPanicWipe();
-      }
-
       await ref.read(historyProvider.notifier).add(HistoryEntry(
             id: _uuid.v4(),
             operation: HistoryOperation.decoded,
@@ -154,10 +149,6 @@ class DecodeNotifier extends StateNotifier<DecodeState> {
       final newAttempts = state.failedAttempts + 1;
       state = state.copyWith(stage: DecodeStage.error, errorMessage: 'Decode failed unexpectedly.', failedAttempts: newAttempts);
       
-      if (settings.panicWipeEnabled && newAttempts >= settings.maxFailedAttempts) {
-        await _performPanicWipe();
-      }
-
       await ref.read(historyProvider.notifier).add(HistoryEntry(
             id: _uuid.v4(),
             operation: HistoryOperation.decoded,
@@ -167,13 +158,6 @@ class DecodeNotifier extends StateNotifier<DecodeState> {
             status: HistoryStatus.failed,
           ));
     }
-  }
-
-  Future<void> _performPanicWipe() async {
-    await ref.read(historyProvider.notifier).clearAll();
-    state = state.copyWith(
-      errorMessage: 'SECURITY ALERT: Maximum failed attempts reached. Local history has been wiped for your protection.',
-    );
   }
 
   void reset() {

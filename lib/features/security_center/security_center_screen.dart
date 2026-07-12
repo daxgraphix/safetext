@@ -9,12 +9,12 @@ import '../../app/routes.dart';
 import '../../app/theme/app_theme.dart';
 import '../../app/theme/app_colors.dart';
 import '../../core/security/device_integrity_service.dart';
-import '../../core/services/export_service.dart';
 import '../../core/utils/formatters.dart';
 import '../../data/models/history_entry.dart';
 import '../../shared/widgets/status_chip.dart';
 import '../../shared/widgets/app_buttons.dart';
 import '../../shared/widgets/grid_painter.dart';
+import '../../shared/widgets/export_report_sheet.dart';
 import '../../shared/widgets/safetext_app_bar.dart';
 import 'providers/integrity_provider.dart';
 
@@ -201,14 +201,19 @@ class _SecurityStatusCard extends StatefulWidget {
 
 class _SecurityStatusCardState extends State<_SecurityStatusCard> with SingleTickerProviderStateMixin {
   late AnimationController _pulseController;
+  late Animation<double> _pulseAnimation;
 
   @override
   void initState() {
     super.initState();
     _pulseController = AnimationController(
       vsync: this,
-      duration: const Duration(seconds: 3),
+      duration: const Duration(seconds: 2),
     )..repeat(reverse: true);
+
+    _pulseAnimation = Tween<double>(begin: 1.0, end: 1.1).animate(
+      CurvedAnimation(parent: _pulseController, curve: Curves.easeInOut),
+    );
   }
 
   @override
@@ -230,13 +235,21 @@ class _SecurityStatusCardState extends State<_SecurityStatusCard> with SingleTic
   Widget build(BuildContext context) {
     final score = _calculateScore();
     final isSafe = score > 0.8;
+    final color = isSafe ? AppColors.green : AppColors.red;
 
     return Container(
       padding: const EdgeInsets.all(24),
       decoration: BoxDecoration(
         color: AppColors.black,
         borderRadius: BorderRadius.circular(AppRadius.sm),
-        border: Border.all(color: Colors.white, width: 2.0),
+        border: Border.all(color: color, width: 2.0),
+        boxShadow: [
+          BoxShadow(
+            color: color.withValues(alpha: 0.1),
+            blurRadius: 20,
+            spreadRadius: 5,
+          ),
+        ],
       ),
       child: Column(
         children: [
@@ -246,14 +259,17 @@ class _SecurityStatusCardState extends State<_SecurityStatusCard> with SingleTic
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    _ScoreBadge(score: score),
+                    ScaleTransition(
+                      scale: _pulseAnimation,
+                      child: _ScoreBadge(score: score),
+                    ),
                     const SizedBox(height: 16),
                     Text(
                       isSafe ? 'ENVIRONMENT SECURED' : 'SECURITY WARNING',
-                      style: const TextStyle(
+                      style: TextStyle(
                         fontSize: 22,
                         fontWeight: FontWeight.w900,
-                        color: Colors.white,
+                        color: isSafe ? Colors.white : AppColors.red,
                         letterSpacing: -0.5,
                       ),
                     ),
@@ -264,16 +280,24 @@ class _SecurityStatusCardState extends State<_SecurityStatusCard> with SingleTic
             ],
           ),
           const SizedBox(height: 24),
-          Text(
-            (isSafe
-                ? 'Your device environment passed all high-level integrity checks. Hardware-backed encryption is active and no tampering was detected.'
-                : 'Warning: This environment has potential security risks. Some hardware-backed security features may be disabled or bypassed.').toUpperCase(),
-            style: const TextStyle(
-              fontSize: 11,
-              color: Colors.white,
-              fontWeight: FontWeight.w900,
-              height: 1.4,
-              letterSpacing: 0.5,
+          Container(
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: color.withValues(alpha: 0.05),
+              border: Border.all(color: color.withValues(alpha: 0.2), width: 1),
+              borderRadius: BorderRadius.circular(AppRadius.sm),
+            ),
+            child: Text(
+              (isSafe
+                  ? 'Your device environment passed all high-level integrity checks. Hardware-backed encryption is active and no tampering was detected.'
+                  : 'Warning: This environment has potential security risks. Some hardware-backed security features may be disabled or bypassed.').toUpperCase(),
+              style: TextStyle(
+                fontSize: 11,
+                color: isSafe ? Colors.white.withValues(alpha: 0.9) : AppColors.red,
+                fontWeight: FontWeight.w900,
+                height: 1.4,
+                letterSpacing: 0.5,
+              ),
             ),
           ),
         ],
@@ -614,6 +638,26 @@ class _ThreatLevelMonitor extends StatelessWidget {
             passed: integrity.isSafe,
             description: 'Comprehensive check of system-level integrity, including bootloader status, system partition signatures, and known security hooks that might indicate a compromised kernel.',
           ),
+          Padding(
+            padding: const EdgeInsets.symmetric(vertical: 12),
+            child: Divider(height: 1, thickness: 1, color: scheme.outline.withValues(alpha: 0.1)),
+          ),
+          _ThreatVisualizationItem(
+            label: 'DEVICE HARDWARE',
+            value: integrity.deviceModel.toUpperCase(),
+            passed: true,
+            description: 'IDENTIFIED HARDWARE ARCHITECTURE: ${integrity.deviceModel}. VERIFYING MANUFACTURER SIGNATURES AND COMPONENT AUTHENTICITY.',
+          ),
+          Padding(
+            padding: const EdgeInsets.symmetric(vertical: 12),
+            child: Divider(height: 1, thickness: 1, color: scheme.outline.withValues(alpha: 0.1)),
+          ),
+          _ThreatVisualizationItem(
+            label: 'OPERATING SYSTEM',
+            value: integrity.osVersion.toUpperCase(),
+            passed: true,
+            description: 'ACTIVE OS KERNEL: ${integrity.osVersion}. MONITORING FOR VERSION-SPECIFIC VULNERABILITIES AND UNAUTHORIZED SYSTEM PATCHES.',
+          ),
         ],
       ),
     );
@@ -816,124 +860,7 @@ class _AuditLogList extends ConsumerWidget {
 
   Future<void> _exportAudit(BuildContext context, WidgetRef ref, List<HistoryEntry> history) async {
     HapticFeedback.mediumImpact();
-    final integrity = await ref.read(integrityProvider.future);
-    final exportService = ref.read(exportServiceProvider);
-
-    if (!context.mounted) return;
-
-    showModalBottomSheet(
-      context: context,
-      backgroundColor: Colors.transparent,
-      builder: (context) => Container(
-        decoration: BoxDecoration(
-          color: Theme.of(context).colorScheme.surface,
-          border: Border(top: BorderSide(color: Theme.of(context).colorScheme.onSurface, width: 2)),
-        ),
-        padding: const EdgeInsets.all(24),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const Text(
-              'EXPORT FORMAT',
-              style: TextStyle(fontSize: 18, fontWeight: FontWeight.w900, letterSpacing: 1.0),
-            ),
-            const SizedBox(height: 20),
-            Row(
-              children: [
-                Expanded(
-                  child: SecondaryButton(
-                    label: 'TEXT FILE',
-                    icon: Icons.description_rounded,
-                    onPressed: () {
-                      Navigator.pop(context);
-                      exportService.shareTextReport(history: history, integrity: integrity);
-                    },
-                  ),
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: SecondaryButton(
-                    label: 'PDF REPORT',
-                    icon: Icons.picture_as_pdf_rounded,
-                    onPressed: () {
-                      Navigator.pop(context);
-                      _showPdfPasswordDialog(context, ref, history, integrity);
-                    },
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 12),
-            PrimaryButton(
-              label: 'PRINT REPORT',
-              icon: Icons.print_rounded,
-              onPressed: () {
-                Navigator.pop(context);
-                exportService.printReport(history: history, integrity: integrity);
-              },
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  void _showPdfPasswordDialog(BuildContext context, WidgetRef ref, List<HistoryEntry> history, DeviceIntegrityResult integrity) {
-    final passwordController = TextEditingController();
-    showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      backgroundColor: Colors.transparent,
-      builder: (context) => Padding(
-        padding: EdgeInsets.only(bottom: MediaQuery.of(context).viewInsets.bottom),
-        child: Container(
-          decoration: BoxDecoration(
-            color: Theme.of(context).colorScheme.surface,
-            border: Border(top: BorderSide(color: Theme.of(context).colorScheme.onSurface, width: 2)),
-          ),
-          padding: const EdgeInsets.all(24),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              const Text(
-                'ENCRYPT PDF REPORT?',
-                style: TextStyle(fontSize: 18, fontWeight: FontWeight.w900, letterSpacing: 1.0),
-              ),
-              const SizedBox(height: 8),
-              const Text(
-                'OPTIONAL: ADD A PASSWORD TO THE PDF FILE.',
-                style: TextStyle(fontFamily: 'Roboto Mono', fontSize: 11, color: Colors.grey),
-              ),
-              const SizedBox(height: 20),
-              TextField(
-                controller: passwordController,
-                obscureText: true,
-                style: const TextStyle(fontFamily: 'Roboto Mono', fontWeight: FontWeight.bold),
-                decoration: const InputDecoration(
-                  labelText: 'PDF PASSWORD (OPTIONAL)',
-                  hintText: 'LEAVE BLANK FOR NO PASSWORD',
-                ),
-              ),
-              const SizedBox(height: 24),
-              PrimaryButton(
-                label: 'GENERATE PDF',
-                onPressed: () {
-                  final password = passwordController.text;
-                  Navigator.pop(context);
-                  ref.read(exportServiceProvider).sharePdfReport(
-                    history: history,
-                    integrity: integrity,
-                    password: password.isEmpty ? null : password,
-                  );
-                },
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
+    await ExportReportSheet.show(context, ref, history);
   }
 }
 

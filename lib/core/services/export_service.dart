@@ -51,6 +51,7 @@ class ExportService {
     await file.writeAsString(svg.toString());
     await Share.shareXFiles([XFile(file.path)], subject: 'SafeText Secure QR (Vector)');
   }
+
   Future<void> shareTextReport({
     required List<HistoryEntry> history,
     required DeviceIntegrityResult integrity,
@@ -86,6 +87,25 @@ class ExportService {
     }
   }
 
+  Future<void> savePdfToFile({
+    required List<HistoryEntry> history,
+    required DeviceIntegrityResult integrity,
+  }) async {
+    final pdfBytes = await _generatePdfReport(history, integrity);
+    
+    Directory? directory;
+    if (Platform.isAndroid) {
+      // Try to get Downloads directory for easier user access
+      directory = await getExternalStorageDirectory();
+    } else {
+      directory = await getApplicationDocumentsDirectory();
+    }
+    
+    final fileName = 'safetext_audit_${DateTime.now().millisecondsSinceEpoch}.pdf';
+    final file = File('${directory!.path}/$fileName');
+    await file.writeAsBytes(pdfBytes);
+  }
+
   Future<void> printReport({
     required List<HistoryEntry> history,
     required DeviceIntegrityResult integrity,
@@ -100,6 +120,9 @@ class ExportService {
     report.writeln('      SAFETEXT SECURITY AUDIT REPORT    ');
     report.writeln('      GENERATED: ${DateTime.now()}      ');
     report.writeln('========================================\n');
+    report.writeln('[DEVICE INFO]');
+    report.writeln('MODEL: ${integrity.deviceModel}');
+    report.writeln('OS: ${integrity.osVersion}\n');
     report.writeln('[DEVICE INTEGRITY]');
     report.writeln('ROOTED: ${integrity.isRooted ? 'YES (CRITICAL)' : 'NO'}');
     report.writeln('REAL DEVICE: ${integrity.isRealDevice ? 'YES' : 'NO (EMULATOR)'}');
@@ -189,6 +212,9 @@ class ExportService {
           pw.Text('DEVICE INTEGRITY STATUS: ${isCompromised ? 'COMPROMISED' : 'SECURE'}',
               style: pw.TextStyle(font: font, fontSize: 12, color: isCompromised ? PdfColors.red : PdfColors.green700)),
           pw.SizedBox(height: 8),
+          _integrityRow('DEVICE MODEL', integrity.deviceModel, false),
+          _integrityRow('OPERATING SYSTEM', integrity.osVersion, false),
+          pw.Divider(thickness: 0.5, color: PdfColors.grey300),
           _integrityRow('ROOT ACCESS', integrity.isRooted ? 'DETECTED' : 'NONE', integrity.isRooted),
           _integrityRow('EMULATOR CHECK', integrity.isRealDevice ? 'PASSED' : 'FAILED', !integrity.isRealDevice),
           _integrityRow('DEVELOPER MODE', integrity.isDevMode ? 'ACTIVE' : 'DISABLED', integrity.isDevMode),

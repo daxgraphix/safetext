@@ -5,17 +5,15 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../app/providers.dart';
 import '../../app/theme/app_theme.dart';
 import '../../app/theme/app_colors.dart';
-import '../../core/services/export_service.dart';
 import '../../core/utils/formatters.dart';
 import '../../data/models/history_entry.dart';
 import '../../shared/dialogs/confirm_dialog.dart';
 import '../../shared/widgets/activity_tile.dart';
-import '../../shared/widgets/app_buttons.dart';
+import '../../shared/widgets/safetext_app_bar.dart';
 import '../../shared/widgets/status_chip.dart';
 import '../../shared/widgets/grid_painter.dart';
-import '../../shared/widgets/safetext_app_bar.dart';
+import '../../shared/widgets/export_report_sheet.dart';
 import '../encode/widgets/particle_burst.dart';
-import '../security_center/providers/integrity_provider.dart';
 
 enum _Filter { all, encoded, decoded, tools }
 
@@ -49,124 +47,7 @@ class _HistoryScreenState extends ConsumerState<HistoryScreen> {
 
   Future<void> _exportHistory(BuildContext context, List<HistoryEntry> history) async {
     HapticFeedback.mediumImpact();
-    final integrity = await ref.read(integrityProvider.future);
-    final exportService = ref.read(exportServiceProvider);
-
-    if (!context.mounted) return;
-
-    showModalBottomSheet(
-      context: context,
-      backgroundColor: Colors.transparent,
-      builder: (context) => Container(
-        decoration: BoxDecoration(
-          color: Theme.of(context).colorScheme.surface,
-          border: Border(top: BorderSide(color: Theme.of(context).colorScheme.onSurface, width: 2)),
-        ),
-        padding: const EdgeInsets.all(24),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const Text(
-              'EXPORT HISTORY',
-              style: TextStyle(fontSize: 18, fontWeight: FontWeight.w900, letterSpacing: 1.0),
-            ),
-            const SizedBox(height: 20),
-            Row(
-              children: [
-                Expanded(
-                  child: SecondaryButton(
-                    label: 'TEXT FILE',
-                    icon: Icons.description_rounded,
-                    onPressed: () {
-                      Navigator.pop(context);
-                      exportService.shareTextReport(history: history, integrity: integrity);
-                    },
-                  ),
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: SecondaryButton(
-                    label: 'PDF REPORT',
-                    icon: Icons.picture_as_pdf_rounded,
-                    onPressed: () {
-                      Navigator.pop(context);
-                      _showPdfPasswordDialog(context, history, integrity);
-                    },
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 12),
-            PrimaryButton(
-              label: 'PRINT HISTORY',
-              icon: Icons.print_rounded,
-              onPressed: () {
-                Navigator.pop(context);
-                exportService.printReport(history: history, integrity: integrity);
-              },
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  void _showPdfPasswordDialog(BuildContext context, List<HistoryEntry> history, dynamic integrity) {
-    final passwordController = TextEditingController();
-    showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      backgroundColor: Colors.transparent,
-      builder: (context) => Padding(
-        padding: EdgeInsets.only(bottom: MediaQuery.of(context).viewInsets.bottom),
-        child: Container(
-          decoration: BoxDecoration(
-            color: Theme.of(context).colorScheme.surface,
-            border: Border(top: BorderSide(color: Theme.of(context).colorScheme.onSurface, width: 2)),
-          ),
-          padding: const EdgeInsets.all(24),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              const Text(
-                'ENCRYPT PDF REPORT?',
-                style: TextStyle(fontSize: 18, fontWeight: FontWeight.w900, letterSpacing: 1.0),
-              ),
-              const SizedBox(height: 8),
-              const Text(
-                'OPTIONAL: ADD A PASSWORD TO THE PDF FILE.',
-                style: TextStyle(fontFamily: 'Roboto Mono', fontSize: 11, color: Colors.grey),
-              ),
-              const SizedBox(height: 20),
-              TextField(
-                controller: passwordController,
-                obscureText: true,
-                style: const TextStyle(fontFamily: 'Roboto Mono', fontWeight: FontWeight.bold),
-                decoration: const InputDecoration(
-                  labelText: 'PDF PASSWORD (OPTIONAL)',
-                  hintText: 'LEAVE BLANK FOR NO PASSWORD',
-                ),
-              ),
-              const SizedBox(height: 24),
-              PrimaryButton(
-                label: 'GENERATE PDF',
-                onPressed: () {
-                  final password = passwordController.text;
-                  Navigator.pop(context);
-                  ref.read(exportServiceProvider).sharePdfReport(
-                    history: history,
-                    integrity: integrity,
-                    password: password.isEmpty ? null : password,
-                  );
-                },
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
+    await ExportReportSheet.show(context, ref, history);
   }
 
   void _showEntryDetails(BuildContext context, HistoryEntry entry, _EntryMeta meta) {

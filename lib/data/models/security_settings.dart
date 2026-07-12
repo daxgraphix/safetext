@@ -42,23 +42,11 @@ class SecuritySettings {
   @HiveField(14)
   final String? deviceBindingId;
 
-  // --- Anti-Forensic Panic ---
-  @HiveField(15)
-  final bool panicWipeEnabled;
-  @HiveField(16)
-  final int maxFailedAttempts;
-
   // --- Auto-Expiry ---
   @HiveField(17)
   final bool historyExpiryEnabled;
   @HiveField(18)
   final int historyExpiryDays;
-
-  // --- App Password ---
-  @HiveField(19)
-  final String? appPassword; // Hashed password
-  @HiveField(20)
-  final bool isPasswordSet;
 
   const SecuritySettings({
     this.darkMode = false,
@@ -76,12 +64,8 @@ class SecuritySettings {
     this.passwordExcludeSimilar = false,
     this.passwordExcludeAmbiguous = false,
     this.deviceBindingId,
-    this.panicWipeEnabled = false,
-    this.maxFailedAttempts = 5,
     this.historyExpiryEnabled = false,
     this.historyExpiryDays = 30,
-    this.appPassword,
-    this.isPasswordSet = false,
   });
 
   SecuritySettings copyWith({
@@ -100,12 +84,8 @@ class SecuritySettings {
     bool? passwordExcludeSimilar,
     bool? passwordExcludeAmbiguous,
     String? deviceBindingId,
-    bool? panicWipeEnabled,
-    int? maxFailedAttempts,
     bool? historyExpiryEnabled,
     int? historyExpiryDays,
-    String? appPassword,
-    bool? isPasswordSet,
   }) {
     return SecuritySettings(
       darkMode: darkMode ?? this.darkMode,
@@ -123,12 +103,8 @@ class SecuritySettings {
       passwordExcludeSimilar: passwordExcludeSimilar ?? this.passwordExcludeSimilar,
       passwordExcludeAmbiguous: passwordExcludeAmbiguous ?? this.passwordExcludeAmbiguous,
       deviceBindingId: deviceBindingId ?? this.deviceBindingId,
-      panicWipeEnabled: panicWipeEnabled ?? this.panicWipeEnabled,
-      maxFailedAttempts: maxFailedAttempts ?? this.maxFailedAttempts,
       historyExpiryEnabled: historyExpiryEnabled ?? this.historyExpiryEnabled,
       historyExpiryDays: historyExpiryDays ?? this.historyExpiryDays,
-      appPassword: appPassword ?? this.appPassword,
-      isPasswordSet: isPasswordSet ?? this.isPasswordSet,
     );
   }
 }

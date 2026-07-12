@@ -32,8 +32,6 @@ class SecuritySettingsAdapter extends TypeAdapter<SecuritySettings> {
       passwordExcludeSimilar: fields[12] as bool,
       passwordExcludeAmbiguous: fields[13] as bool,
       deviceBindingId: fields[14] as String?,
-      panicWipeEnabled: fields[15] as bool,
-      maxFailedAttempts: fields[16] as int,
       historyExpiryEnabled: fields[17] as bool,
       historyExpiryDays: fields[18] as int,
     );
@@ -42,7 +40,7 @@ class SecuritySettingsAdapter extends TypeAdapter<SecuritySettings> {
   @override
   void write(BinaryWriter writer, SecuritySettings obj) {
     writer
-      ..writeByte(19)
+      ..writeByte(17)
       ..writeByte(0)
       ..write(obj.darkMode)
       ..writeByte(1)
@@ -73,10 +71,6 @@ class SecuritySettingsAdapter extends TypeAdapter<SecuritySettings> {
       ..write(obj.passwordExcludeAmbiguous)
       ..writeByte(14)
       ..write(obj.deviceBindingId)
-      ..writeByte(15)
-      ..write(obj.panicWipeEnabled)
-      ..writeByte(16)
-      ..write(obj.maxFailedAttempts)
       ..writeByte(17)
       ..write(obj.historyExpiryEnabled)
       ..writeByte(18)

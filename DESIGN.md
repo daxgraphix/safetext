@@ -12,7 +12,7 @@ The current app has a solid architectural foundation (Riverpod + GoRouter + Hive
 - **Bottom nav** uses generic icons without visual distinction
 - **Home screen** hero card lacks a real security status metric
 - **Splash screen** animation is too simple
-- **Onboarding** illustrations are icon-only; no backgrounds or animation
+- **Onboarding**: illustrations are icon-only; no backgrounds or animation
 - **Encode/Decode screens** have a step-counter badge but no actual progress bar
 - **Settings screen** uses plain dividers instead of grouped-card sections with visual icons
 - **Security Center** status card is minimal — no animated gauge or rings

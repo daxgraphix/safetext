@@ -44,9 +44,19 @@ class StorageService {
   /// Saves the image to the device's public Gallery.
   Future<void> saveToGallery(Uint8List bytes, {String? fileName}) async {
     try {
+      // Check/Request permission
+      final hasAccess = await Gal.hasAccess();
+      if (!hasAccess) {
+        await Gal.requestAccess();
+      }
+
       // For Gal, we need to write to a temp file first
       final tempDir = await getTemporaryDirectory();
-      final name = fileName ?? 'safetext_${DateTime.now().millisecondsSinceEpoch}.png';
+      var name = fileName ?? 'safetext_${DateTime.now().millisecondsSinceEpoch}.png';
+      if (!name.toLowerCase().endsWith('.png') && !name.toLowerCase().endsWith('.jpg')) {
+        name += '.png';
+      }
+
       final tempFile = File('${tempDir.path}/$name');
       await tempFile.writeAsBytes(bytes);
 

@@ -440,12 +440,29 @@ class _QRVaultScreenState extends ConsumerState<QRVaultScreen> with SingleTicker
                       label: 'SAVE',
                       icon: Icons.save_alt_rounded,
                       onPressed: () async {
-                        final image = await _screenshotController.capture();
-                        if (image != null) {
-                          await ref.read(storageServiceProvider).saveToGallery(image, fileName: 'QR_VAULT');
+                        try {
+                          final image = await _screenshotController.capture();
+                          if (image != null) {
+                            await ref.read(storageServiceProvider).saveToGallery(
+                              image, 
+                              fileName: 'QR_VAULT_${DateTime.now().millisecondsSinceEpoch}.png'
+                            );
+                            if (mounted) {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                const SnackBar(
+                                  content: Text('SAVED TO GALLERY'),
+                                  backgroundColor: Colors.green,
+                                ),
+                              );
+                            }
+                          }
+                        } catch (e) {
                           if (mounted) {
                             ScaffoldMessenger.of(context).showSnackBar(
-                              const SnackBar(content: Text('SAVED TO GALLERY')),
+                              SnackBar(
+                                content: Text('SAVE FAILED: ${e.toString()}'),
+                                backgroundColor: Colors.red,
+                              ),
                             );
                           }
                         }

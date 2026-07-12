@@ -3,7 +3,7 @@
 **Enterprise-Grade Offline Privacy & Steganography Platform**
 _Private Messages Hidden in Plain Sight_
 
-SafeText is a high-security vault designed to hide encrypted data within ordinary images and manage sensitive QR codes without ever touching the cloud. It features a hardware-anchored security model, mandatory biometric/PIN protection, and "local-first" data sovereignty.
+SafeText is a high-security vault designed to hide encrypted data within ordinary images and manage sensitive QR codes without ever touching the cloud. It features a hardware-anchored security model and "local-first" data sovereignty.
 
 ## 🛡️ Security Architecture
 
@@ -11,11 +11,8 @@ SafeText employs a multi-layered "Defense-in-Depth" strategy:
 
 1.  **Hardware Binding**: The application generates a unique `device_binding_id` stored in the device's Secure Enclave (Android Keystore / iOS Keychain). Data cannot be decrypted if moved to another device.
 2.  **Hardware-Anchored Encryption**: All local databases (Hive) are encrypted using **AES-256**. The encryption keys are stored in the device's TEE (Trusted Execution Environment) via `DeviceSecurityService`.
-3.  **Mandatory Security Gate**: Access is guarded by a unified `SecurityGateDialog`. 
-    *   **Cold Start**: Authentication is required immediately after the Splash screen.
-    *   **App Resumption**: The app automatically locks when moved to the background, requiring PIN or Biometrics (Fingerprint/FaceID) to resume.
-4.  **Screenshot Blocking**: Uses native `FLAG_SECURE` to prevent screen captures and hide app content from the "Recent Apps" switcher.
-5.  **No-Cloud Policy**: 100% offline. No analytics, no accounts, and no network permissions.
+3.  **Screenshot Blocking**: Uses native `FLAG_SECURE` to prevent screen captures and hide app content from the "Recent Apps" switcher.
+4.  **No-Cloud Policy**: 100% offline. No analytics, no accounts, and no network permissions.
 
 ## 🚀 Core Features
 
@@ -47,7 +44,7 @@ An audit log of all cryptographic operations.
 ## 📱 Screen Flows
 
 - **Splash**: Performs integrity checks and hardware-key retrieval.
-- **Onboarding**: Mandatory 2-step PIN setup with confirmation.
+- **Onboarding**: Quick feature tour and introduction to the app's security model.
 - **App Shell**: A persistent bottom-nav container hosting:
     - **Home**: Quick access to Encode, Decode, and Tools.
     - **History**: Searchable audit log of past actions.

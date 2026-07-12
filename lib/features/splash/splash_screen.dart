@@ -1,13 +1,11 @@
 import 'dart:math';
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../app/providers.dart';
 import '../../app/routes.dart';
 import '../../app/theme/app_theme.dart';
-import '../../shared/dialogs/security_gate_dialog.dart';
 
 class SplashScreen extends ConsumerStatefulWidget {
   final bool onboardingComplete;
@@ -74,27 +72,7 @@ class _SplashScreenState extends ConsumerState<SplashScreen> with TickerProvider
       return;
     }
 
-    // Require authentication on app open if password is set
-    if (settings.isPasswordSet) {
-      // Mark as locked initially so if they somehow bypass splash they still hit the gate
-      ref.read(lockStateProvider.notifier).state = true;
-      
-      final authenticated = await SecurityGateDialog.show(
-        context,
-        title: 'APP LOCKED',
-        message: 'PLEASE AUTHENTICATE TO UNLOCK YOUR SECURE VAULT.',
-      );
-      if (!authenticated) {
-        SystemNavigator.pop();
-        return;
-      }
-      // Successfully authenticated at startup
-      ref.read(lockStateProvider.notifier).state = false;
-    }
-
-    if (mounted) {
-      context.go(AppRoutes.home);
-    }
+    context.go(AppRoutes.home);
   }
 
   @override
